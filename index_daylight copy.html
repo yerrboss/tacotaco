@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TacoTaco - Seoul Live Weather & Pixel Map</title>
+  
+  <!-- Retro Pixel Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    * {
+      font-family: 'Silkscreen', cursive;
+      user-select: none;
+      -webkit-font-smoothing: none;
+    }
+
+    .font-arcade {
+      font-family: 'Press Start 2P', cursive;
+    }
+
+    canvas {
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+
+    /* Chunky Pixel UI Styling */
+    .pixel-box-vibrant {
+      background: #fffbe8;
+      border: 4px solid #000;
+      box-shadow: 
+        inset 0 0 0 2px #fff,
+        0 0 0 2px #000,
+        4px 6px 0 0 rgba(0, 0, 0, 0.85);
+    }
+
+    .pixel-btn-sun {
+      background: #ff5964;
+      color: #ffffff;
+      border: 3px solid #000;
+      box-shadow: 
+        inset -3px -3px 0px 0px #b81d28,
+        inset 3px 3px 0px 0px #ff9aa2,
+        3px 4px 0 0 #000;
+      transition: all 0.05s ease;
+    }
+    .pixel-btn-sun:active {
+      transform: translate(2px, 2px);
+      box-shadow: 
+        inset 3px 3px 0px 0px #b81d28,
+        1px 1px 0 0 #000;
+    }
+
+    .pixel-btn-sky {
+      background: #35a7ff;
+      color: #ffffff;
+      border: 3px solid #000;
+      box-shadow: 
+        inset -3px -3px 0px 0px #0066b8,
+        inset 3px 3px 0px 0px #85ccff,
+        3px 4px 0 0 #000;
+    }
+    .pixel-btn-sky:active {
+      transform: translate(2px, 2px);
+      box-shadow: 
+        inset 3px 3px 0px 0px #0066b8,
+        1px 1px 0 0 #000;
+    }
+
+    /* Weather Override Badges */
+    .weather-btn {
+      border: 2px solid #000;
+      box-shadow: 2px 2px 0 0 #000;
+      font-size: 8px;
+      padding: 3px 6px;
+    }
+    .weather-btn.active {
+      background: #ffca3a !important;
+      color: #000 !important;
+      font-weight: bold;
+    }
+
+    /* Custom Retro Scrollbar */
+    .pixel-scroll::-webkit-scrollbar {
+      width: 12px;
+    }
+    .pixel-scroll::-webkit-scrollbar-track {
+      background: #ffeaa7;
+      border-left: 2px solid #000;
+    }
+    .pixel-scroll::-webkit-scrollbar-thumb {
+      background: #ff5964;
+      border: 2px solid #000;
+    }
+
+    .weather-vignette {
+      pointer-events: none;
+      transition: background 1s ease;
+    }
+  </style>
+</head>
+<body class="bg-[#242424] text-black overflow-hidden w-screen h-screen relative select-none">
+
+  <!-- Dynamic Atmospheric Vignette Overlay -->
+  <div id="weatherVignette" class="weather-vignette fixed inset-0 z-30"></div>
+
+  <!-- Fullscreen Map Canvas -->
+  <canvas id="mapCanvas" class="absolute inset-0 w-full h-full block cursor-grab active:cursor-grabbing z-0"></canvas>
+
+  <!-- TOP-LEFT WEATHER & LOCATION CONTROL BAR -->
+  <div class="fixed top-4 left-4 z-20 pointer-events-auto flex flex-col gap-2">
+    <!-- Live Location & Weather Monitor -->
+    <div class="pixel-box-vibrant p-2.5 max-w-xs flex flex-col gap-1.5">
+      <div class="flex items-center justify-between border-b-2 border-black pb-1">
+        <span class="font-arcade text-[8px] text-black flex items-center gap-1">
+          <i data-lucide="map" class="w-3 h-3 text-red-600"></i> SEOUL RADAR
+        </span>
+        <span id="seoulSpotBadge" class="bg-amber-400 text-black px-1.5 py-0.5 text-[8px] font-arcade border border-black">
+          MAP: HONGDAE
+        </span>
+      </div>
+
+      <div class="flex items-center justify-between text-[10px] text-gray-800 pt-0.5">
+        <span class="font-bold flex items-center gap-1">
+          <span id="weatherIconDisplay">☀️</span> WEATHER:
+        </span>
+        <span id="weatherStatusText" class="font-arcade text-emerald-700 text-[9px]">CLEAR / DAY</span>
+      </div>
+
+      <div class="text-[9px] text-gray-600 flex justify-between">
+        <span>Temp: <strong id="tempDisplay" class="text-black">22°C</strong></span>
+        <span>Han River: <strong class="text-blue-600">Flowing 🌊</strong></span>
+      </div>
+    </div>
+
+    <!-- Interactive Weather Demo Override Buttons -->
+    <div class="pixel-box-vibrant p-1.5 flex flex-wrap items-center gap-1 max-w-xs">
+      <span class="font-arcade text-[7px] text-gray-700 w-full mb-0.5">⚡ LIVE WEATHER SIMULATOR:</span>
+      <button onclick="setWeather('day')" id="wbtn-day" class="weather-btn bg-yellow-100 text-yellow-900 font-arcade active">☀️ DAY</button>
+      <button onclick="setWeather('sunset')" id="wbtn-sunset" class="weather-btn bg-rose-100 text-rose-900 font-arcade">🌇 SUNSET</button>
+      <button onclick="setWeather('night')" id="wbtn-night" class="weather-btn bg-indigo-100 text-indigo-900 font-arcade">🌙 NIGHT</button>
+      <button onclick="setWeather('rain')" id="wbtn-rain" class="weather-btn bg-blue-100 text-blue-900 font-arcade">🌧️ RAIN</button>
+      <button onclick="setWeather('snow')" id="wbtn-snow" class="weather-btn bg-sky-100 text-sky-900 font-arcade">❄️ SNOW</button>
+    </div>
+  </div>
+
+  <!-- TOP-RIGHT RETRO ARCADE HUD -->
+  <div class="fixed top-4 right-4 z-20 flex flex-col items-end gap-3 max-w-xs sm:max-w-sm pointer-events-auto">
+    
+    <!-- Status & Coordinates Box -->
+    <div class="pixel-box-vibrant p-3 w-full text-xs text-black flex flex-col gap-2">
+      <div class="flex items-center justify-between border-b-2 border-black pb-2">
+        <span class="flex items-center gap-2 font-arcade text-[9px] text-emerald-700">
+          <span class="inline-block w-2.5 h-2.5 bg-emerald-500 rounded-none animate-ping"></span>
+          LIVE GPS
+        </span>
+        <span id="truckStatus" class="bg-[#ff5964] text-white px-2 py-0.5 text-[8px] font-arcade tracking-widest border border-black shadow-[2px_2px_0_0_#000]">
+          PARKED & COOKING 🌮
+        </span>
+      </div>
+      
+      <div class="flex items-center justify-between text-black text-[11px] pt-0.5">
+        <span class="flex items-center gap-1.5 font-bold text-gray-700">
+          <i data-lucide="map-pin" class="w-3.5 h-3.5 text-red-600"></i>
+          CURRENT STOP:
+        </span>
+        <span id="locationName" class="text-black font-bold truncate">Hongdae St. Exit 9</span>
+      </div>
+
+      <!-- Live Countdown Timer -->
+      <div class="flex items-center justify-between bg-[#ffeaa7] p-2 border-2 border-black shadow-[2px_2px_0_0_#000]">
+        <span class="text-[9px] text-black flex items-center gap-1 font-arcade">
+          <i data-lucide="clock" class="w-3 h-3 text-red-600"></i> LEAVING IN:
+        </span>
+        <span id="countdownTimer" class="font-arcade text-red-600 text-[11px] tracking-widest font-bold">01:42:19</span>
+      </div>
+
+      <!-- Live Low Stock Ticker -->
+      <div class="bg-red-100 border-2 border-red-500 p-2 flex items-center justify-between text-[10px] text-red-900 shadow-[2px_2px_0_0_#000]">
+        <span class="flex items-center gap-1 font-bold text-red-700 text-[9px]">
+          🚨 LOW STOCK:
+        </span>
+        <span id="criticalItemTicker" class="font-arcade text-red-600 text-[9px] truncate font-bold">Carne Asada (6 LEFT)</span>
+      </div>
+    </div>
+
+    <!-- FLOATING ARCADE MENU BUTTON -->
+    <button id="openMenuBtn" onclick="toggleMenu(true)" 
+      class="pixel-btn-sun px-4 py-3 rounded-none flex items-center gap-3 font-arcade text-xs border-2 border-black cursor-pointer group mt-1">
+      <span class="text-xl group-hover:scale-125 transition-transform">🌮</span>
+      <span class="tracking-wider text-white">OPEN MENU</span>
+    </button>
+  </div>
+
+  <!-- BOTTOM-LEFT SEOUL LANDMARK LEGEND -->
+  <div class="fixed bottom-4 left-4 z-20 pointer-events-auto hidden sm:block">
+    <div class="pixel-box-vibrant p-2.5 text-[10px] text-black flex flex-col gap-1">
+      <div class="text-red-600 font-arcade text-[8px] mb-0.5">🏛️ SEOUL LANDMARKS</div>
+      <div>• 🟦 Han River (한강) & Bridges</div>
+      <div>• 🏯 Gyeongbokgung Palace Area</div>
+      <div>• 🗼 N Seoul Tower (N서울타워)</div>
+      <div class="text-emerald-700 text-[9px] mt-1 flex items-center gap-1.5 font-arcade font-bold">
+        <span class="w-2.5 h-2.5 bg-emerald-500 inline-block border border-black"></span> REALTIME WEATHER ENGINE
+      </div>
+    </div>
+  </div>
+
+  <!-- INTERACTIVE MULTI-PAGE MENU OVERLAY MODAL -->
+  <div id="menuModal" class="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 hidden">
+    <div class="pixel-box-vibrant w-full max-w-2xl max-h-[88vh] flex flex-col text-black relative">
+      
+      <!-- Modal Header -->
+      <div class="bg-[#ffca3a] border-b-4 border-black p-4 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <span class="text-2xl">🌮</span>
+          <h2 id="modalTitle" class="font-arcade text-black text-xs sm:text-sm tracking-wider">TACOTACO MENU [PAGE 1/2]</h2>
+        </div>
+        <button onclick="toggleMenu(false)" class="pixel-btn-sun px-2.5 py-1 text-xs font-arcade text-white">
+          X
+        </button>
+      </div>
+
+      <!-- PAGE 1: MENU & LIVE STOCK -->
+      <div id="page1" class="p-4 overflow-y-auto pixel-scroll flex-1 space-y-3 bg-[#fffbe8]">
+        <div class="bg-yellow-100 border-2 border-yellow-600 p-2.5 text-[11px] text-yellow-900 flex justify-between items-center shadow-[2px_2px_0_0_#000]">
+          <span class="font-bold">🔥 Freshly prepared today in Seoul! Quantities update live.</span>
+          <span class="font-arcade text-[8px] text-red-600">FRESH FOOD</span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="menuGrid">
+          <!-- Dynamically Generated Menu Cards -->
+        </div>
+      </div>
+
+      <!-- PAGE 2: INGREDIENTS & SOURCING (원산지) -->
+      <div id="page2" class="p-4 overflow-y-auto pixel-scroll flex-1 space-y-4 bg-[#fffbe8] hidden">
+        <div class="bg-emerald-100 border-2 border-emerald-600 p-2.5 text-[11px] text-emerald-900 shadow-[2px_2px_0_0_#000]">
+          <p class="font-bold mb-0.5 text-emerald-800 font-arcade text-[10px]">🌱 SOURCING & ORIGIN (원산지 안내)</p>
+          <p class="text-[10px] text-gray-800">Fresh daily veggies from Garak Market paired with top-tier imported meats.</p>
+        </div>
+
+        <!-- Korean Official Origin Compliance Table -->
+        <div class="border-2 border-black bg-white p-1 shadow-[3px_3px_0_0_#000]">
+          <table class="w-full text-left text-[11px] border-collapse">
+            <thead>
+              <tr class="bg-[#ffca3a] text-black border-b-2 border-black text-[9px] font-arcade">
+                <th class="p-2.5">Ingredient (재료)</th>
+                <th class="p-2.5">Origin (원산지)</th>
+                <th class="p-2.5">Notes</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 text-gray-900" id="originTableBody">
+              <!-- Dynamically Populated -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="border-2 border-black p-3 bg-orange-50 text-[10px] text-gray-800 space-y-1 shadow-[2px_2px_0_0_#000]">
+          <p class="text-red-600 font-bold font-arcade text-[9px]">⚠️ ALLERGEN NOTICE (알레르기 안내):</p>
+          <p>Contains corn, gluten, cilantro, onions, dairy, and lime juice. Inform chef of allergies!</p>
+        </div>
+      </div>
+
+      <!-- Modal Footer Pagination -->
+      <div class="bg-[#ffca3a] border-t-4 border-black p-3.5 flex items-center justify-between">
+        <button id="prevBtn" onclick="changePage(-1)" disabled class="pixel-btn-sky opacity-50 px-3 py-2 text-[9px] font-arcade cursor-not-allowed">
+          ◀ PREV PAGE
+        </button>
+
+        <div class="text-[10px] font-arcade text-black font-bold" id="pageIndicator">
+          PG 1 / 2
+        </div>
+
+        <button id="nextBtn" onclick="changePage(1)" class="pixel-btn-sky px-3 py-2 text-[9px] font-arcade">
+          NEXT PAGE ➔
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    lucide.createIcons();
+
+    // ------------------------------------------------------------------
+    // ATMOSPHERIC PALETTES & WEATHER STATES
+    // ------------------------------------------------------------------
+    const WEATHER_PRESETS = {
+      day: {
+        bg: '#7dd3fc',
+        grass: '#a3e635',
+        grassPattern: '#84cc16',
+        road: '#64748b',
+        river: '#0284c7',
+        riverWave: '#38bdf8',
+        bridge: '#d1d5db',
+        buildingRoof: ['#ff5964', '#35a7ff', '#ffca3a', '#a855f7'],
+        buildingBody: '#ffffff',
+        window: '#7dd3fc',
+        precip: null,
+        vignette: 'radial-gradient(circle, rgba(255,255,255,0) 60%, rgba(253,224,71,0.2) 100%)',
+        statusText: 'CLEAR / DAY ☀️',
+        temp: '22°C',
+        icon: '☀️'
+      },
+      sunset: {
+        bg: '#fb923c',
+        grass: '#84cc16',
+        grassPattern: '#65a30d',
+        road: '#475569',
+        river: '#4338ca',
+        riverWave: '#818cf8',
+        bridge: '#9ca3af',
+        buildingRoof: ['#f43f5e', '#e11d48', '#8b5cf6', '#d97706'],
+        buildingBody: '#fef3c7',
+        window: '#facc15',
+        precip: null,
+        vignette: 'radial-gradient(circle, rgba(0,0,0,0) 50%, rgba(244,63,94,0.3) 100%)',
+        statusText: 'SUNSET 🌇',
+        temp: '18°C',
+        icon: '🌇'
+      },
+      night: {
+        bg: '#0f172a',
+        grass: '#14532d',
+        grassPattern: '#052e16',
+        road: '#1e293b',
+        river: '#0f172a',
+        riverWave: '#1e3a8a',
+        bridge: '#4b5563',
+        buildingRoof: ['#312e81', '#581c87', '#701a75', '#831843'],
+        buildingBody: '#1e293b',
+        window: '#fde047',
+        precip: null,
+        vignette: 'radial-gradient(circle, rgba(0,0,0,0) 40%, rgba(0,0,0,0.85) 100%)',
+        statusText: 'NIGHT / CLEAR 🌙',
+        temp: '14°C',
+        icon: '🌙'
+      },
+      rain: {
+        bg: '#475569',
+        grass: '#4d7c0f',
+        grassPattern: '#3f6212',
+        road: '#334155',
+        river: '#0369a1',
+        riverWave: '#38bdf8',
+        bridge: '#6b7280',
+        buildingRoof: ['#475569', '#334155', '#64748b'],
+        buildingBody: '#cbd5e1',
+        window: '#38bdf8',
+        precip: 'rain',
+        vignette: 'radial-gradient(circle, rgba(0,0,0,0) 50%, rgba(15,23,42,0.6) 100%)',
+        statusText: 'RAINING 🌧️',
+        temp: '13°C',
+        icon: '🌧️'
+      },
+      snow: {
+        bg: '#e2e8f0',
+        grass: '#f1f5f9',
+        grassPattern: '#cbd5e1',
+        road: '#94a3b8',
+        river: '#0284c7',
+        riverWave: '#e0f2fe',
+        bridge: '#e2e8f0',
+        buildingRoof: ['#f8fafc', '#f1f5f9', '#e2e8f0'],
+        buildingBody: '#ffffff',
+        window: '#fde047',
+        precip: 'snow',
+        vignette: 'radial-gradient(circle, rgba(255,255,255,0) 50%, rgba(226,232,240,0.5) 100%)',
+        statusText: 'SNOWING ❄️',
+        temp: '-2°C',
+        icon: '❄️'
+      }
+    };
+
+    let activeWeatherKey = 'day';
+
+    function setWeather(key) {
+      activeWeatherKey = key;
+      const w = WEATHER_PRESETS[key];
+      
+      document.getElementById('weatherVignette').style.background = w.vignette;
+      document.getElementById('weatherStatusText').innerText = w.statusText;
+      document.getElementById('weatherIconDisplay').innerText = w.icon;
+      document.getElementById('tempDisplay').innerText = w.temp;
+
+      document.querySelectorAll('.weather-btn').forEach(b => b.classList.remove('active'));
+      const activeBtn = document.getElementById(`wbtn-${key}`);
+      if (activeBtn) activeBtn.classList.add('active');
+    }
+
+    // Auto-detect Time of Day based on Seoul Local Time
+    function autoDetectTimeOfDay() {
+      const seoulHour = new Date().getHours();
+      if (seoulHour >= 6 && seoulHour < 17) {
+        setWeather('day');
+      } else if (seoulHour >= 17 && seoulHour < 19) {
+        setWeather('sunset');
+      } else {
+        setWeather('night');
+      }
+    }
+
+    // ------------------------------------------------------------------
+    // MENU DATA
+    // ------------------------------------------------------------------
+    const menuItems = [
+      {
+        id: 'taco-1',
+        name: 'Carne Asada Taco',
+        krName: '카르네 아사다 타코',
+        price: '₩4,500',
+        desc: 'Charred flank steak, cilantro, diced white onion, salsa verde on handmade corn tortilla.',
+        stock: 6,
+        icon: '🥩'
+      },
+      {
+        id: 'taco-2',
+        name: 'Birria Quesa Taco',
+        krName: '비리아 퀘사 타코',
+        price: '₩5,000',
+        desc: 'Slow-braised beef, melted Oaxaca cheese, rich consommé dip, onion & cilantro.',
+        stock: 18,
+        icon: '🧀'
+      },
+      {
+        id: 'taco-3',
+        name: 'Al Pastor Taco',
+        krName: '알 파스토르 타코',
+        price: '₩4,500',
+        desc: 'Achiote-marinated roasted pork, grilled pineapple, salsa roja, fresh cilantro.',
+        stock: 24,
+        icon: '🍍'
+      },
+      {
+        id: 'taco-4',
+        name: 'Baja Fish Taco',
+        krName: '바하 피쉬 타코',
+        price: '₩5,000',
+        desc: 'Crispy beer-battered fish, chipotle crema, shredded cabbage slaw, lime.',
+        stock: 3,
+        icon: '🐟'
+      }
+    ];
+
+    const originData = [
+      { ingredient: 'Beef (소고기)', origin: 'USA / Australia', note: 'USDA Choice Flank & Chuck' },
+      { ingredient: 'Pork (돼지고기)', origin: 'Domestic Korea (국내산)', note: 'Jeju Fresh Pork Shoulder' },
+      { ingredient: 'Chicken (닭고기)', origin: 'Domestic Korea (국내산)', note: 'Antibiotic-free Thigh' },
+      { ingredient: 'Fish (대구)', origin: 'Russia / Pacific', note: 'Wild-Caught Cod Fillet' },
+      { ingredient: 'Veggies (채소)', origin: 'Domestic Korea (국내산)', note: 'Daily Fresh Garak Market' },
+      { ingredient: 'Cheese (치즈)', origin: 'USA / Mexico', note: 'Authentic Oaxaca & Cheddar' }
+    ];
+
+    function renderMenu() {
+      const grid = document.getElementById('menuGrid');
+      grid.innerHTML = menuItems.map(item => {
+        const isLow = item.stock <= 8;
+        return `
+          <div class="border-2 border-black bg-white p-3 flex flex-col justify-between shadow-[3px_3px_0_0_#000]">
+            <div>
+              <div class="flex items-start justify-between gap-2 mb-1.5">
+                <div>
+                  <h3 class="text-black font-bold text-xs">${item.icon} ${item.name}</h3>
+                  <p class="text-[9px] text-gray-600 font-bold">${item.krName}</p>
+                </div>
+                <span class="font-arcade text-black font-bold text-[10px] bg-[#ffca3a] px-1.5 py-0.5 border border-black">${item.price}</span>
+              </div>
+              <p class="text-[10px] text-gray-700 mb-3 leading-relaxed">${item.desc}</p>
+            </div>
+
+            <div class="flex items-center justify-between border-t border-black pt-2 text-[10px]">
+              <span class="text-gray-800 font-bold">STOCK:</span>
+              <span class="font-arcade font-bold ${isLow ? 'text-red-600 animate-pulse' : 'text-emerald-700'}">
+                ${item.stock} LEFT ${isLow ? '🚨' : ''}
+              </span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      const originBody = document.getElementById('originTableBody');
+      originBody.innerHTML = originData.map(row => `
+        <tr class="hover:bg-amber-50">
+          <td class="p-2 font-bold text-black">${row.ingredient}</td>
+          <td class="p-2 text-emerald-800 font-bold">${row.origin}</td>
+          <td class="p-2 text-gray-700 text-[10px]">${row.note}</td>
+        </tr>
+      `).join('');
+    }
+
+    // Modal Navigation
+    let currentPage = 1;
+
+    function toggleMenu(show) {
+      document.getElementById('menuModal').classList.toggle('hidden', !show);
+    }
+
+    function changePage(delta) {
+      currentPage = Math.max(1, Math.min(2, currentPage + delta));
+
+      const page1 = document.getElementById('page1');
+      const page2 = document.getElementById('page2');
+      const prevBtn = document.getElementById('prevBtn');
+      const nextBtn = document.getElementById('nextBtn');
+      const pageIndicator = document.getElementById('pageIndicator');
+      const modalTitle = document.getElementById('modalTitle');
+
+      if (currentPage === 1) {
+        page1.classList.remove('hidden');
+        page2.classList.add('hidden');
+        prevBtn.disabled = true;
+        prevBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        nextBtn.disabled = false;
+        nextBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        modalTitle.innerText = "TACOTACO MENU [PAGE 1/2]";
+      } else {
+        page1.classList.add('hidden');
+        page2.classList.remove('hidden');
+        prevBtn.disabled = false;
+        prevBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        nextBtn.disabled = true;
+        nextBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        modalTitle.innerText = "INGREDIENTS & SOURCING [PAGE 2/2]";
+      }
+
+      pageIndicator.innerText = `PG ${currentPage} / 2`;
+    }
+
+    // Timer
+    let totalSeconds = 6139;
+    setInterval(() => {
+      if (totalSeconds > 0) totalSeconds--;
+      const hrs = Math.floor(totalSeconds / 3600).toString().padStart(2, '0');
+      const mins = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0');
+      const secs = (totalSeconds % 60).toString().padStart(2, '0');
+      document.getElementById('countdownTimer').innerText = `${hrs}:${mins}:${secs}`;
+    }, 1000);
+
+    // ------------------------------------------------------------------
+    // CANVAS: PIXEL SEOUL MAP & PARTICLES ENGINE
+    // ------------------------------------------------------------------
+    const canvas = document.getElementById('mapCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let width = canvas.width = window.innerWidth;
+    let height = canvas.height = window.innerHeight;
+
+    window.addEventListener('resize', () => {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    });
+
+    let cameraX = -100;
+    let cameraY = -200;
+    let isDragging = false;
+    let dragStartX = 0, dragStartY = 0;
+
+    canvas.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      dragStartX = e.clientX - cameraX;
+      dragStartY = e.clientY - cameraY;
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (isDragging) {
+        cameraX = e.clientX - dragStartX;
+        cameraY = e.clientY - dragStartY;
+      }
+    });
+
+    window.addEventListener('mouseup', () => isDragging = false);
+
+    const TILE = 32;
+    const COLS = 60;
+    const ROWS = 45;
+
+    // Realistic Seoul Route Waypoints (Hongdae -> Gyeongbokgung -> Namsan -> Gangnam -> Yeouido)
+    const seoulWaypoints = [
+      { x: 12 * TILE, y: 14 * TILE, name: 'Hongdae St. Exit 9', code: 'HONGDAE' },
+      { x: 26 * TILE, y: 10 * TILE, name: 'Gyeongbokgung Palace', code: 'PALACE' },
+      { x: 34 * TILE, y: 18 * TILE, name: 'N Seoul Tower (Namsan)', code: 'NAMSAN' },
+      { x: 38 * TILE, y: 32 * TILE, name: 'Gangnam Station Exit 11', code: 'GANGNAM' },
+      { x: 18 * TILE, y: 28 * TILE, name: 'Yeouido Han River Park', code: 'YEOUIDO' }
+    ];
+
+    let truckIdx = 0;
+    let truckX = seoulWaypoints[0].x;
+    let truckY = seoulWaypoints[0].y;
+    let truckSpeed = 1.0;
+
+    // Precipitation Particles System (Rain & Snow)
+    const particles = Array.from({ length: 120 }, () => ({
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight,
+      speed: Math.random() * 4 + 2,
+      length: Math.random() * 8 + 6,
+      size: Math.random() * 3 + 2
+    }));
+
+    function updateTruck() {
+      const target = seoulWaypoints[(truckIdx + 1) % seoulWaypoints.length];
+      const dx = target.x - truckX;
+      const dy = target.y - truckY;
+      const dist = Math.hypot(dx, dy);
+
+      if (dist < truckSpeed) {
+        truckX = target.x;
+        truckY = target.y;
+        truckIdx = (truckIdx + 1) % seoulWaypoints.length;
+
+        // Update Location HUD Title
+        const currentSpot = seoulWaypoints[truckIdx];
+        document.getElementById('locationName').innerText = currentSpot.name;
+        document.getElementById('seoulSpotBadge').innerText = `MAP: ${currentSpot.code}`;
+      } else {
+        truckX += (dx / dist) * truckSpeed;
+        truckY += (dy / dist) * truckSpeed;
+      }
+    }
+
+    function drawPixelBox(x, y, w, h, fill, border = '#000000') {
+      ctx.fillStyle = border;
+      ctx.fillRect(x - 2, y - 2, w + 4, h + 4);
+      ctx.fillStyle = fill;
+      ctx.fillRect(x, y, w, h);
+    }
+
+    function drawSeoulLandmarks(pal) {
+      // 1. HAN RIVER (한강) - Diagonal S-Curve
+      for (let r = 22; r <= 26; r++) {
+        for (let c = 0; c < COLS; c++) {
+          const waveOffset = Math.sin((c + Date.now() / 300)) * 2;
+          const x = c * TILE;
+          const y = (r + Math.floor(Math.sin(c / 4) * 2)) * TILE;
+
+          ctx.fillStyle = pal.river;
+          ctx.fillRect(x, y, TILE, TILE);
+
+          // Water ripple
+          ctx.fillStyle = pal.riverWave;
+          ctx.fillRect(x + 4, y + 8 + waveOffset, 12, 3);
+        }
+      }
+
+      // Han River Bridges (Mapo, Banpo)
+      const bridges = [16, 28, 40];
+      bridges.forEach(c => {
+        const x = c * TILE;
+        const y = 22 * TILE;
+        ctx.fillStyle = pal.bridge;
+        ctx.fillRect(x - 4, y - 4, TILE + 8, 5 * TILE + 8);
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x - 4, y - 4, TILE + 8, 5 * TILE + 8);
+      });
+
+      // 2. GYEONGBOKGUNG PALACE AREA (Palace Gate Sprite)
+      const px = 26 * TILE;
+      const py = 8 * TILE;
+      drawPixelBox(px - 16, py - 16, 48, 32, '#dc2626', '#000000');
+      // Curved Hanok Roof
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(px - 22, py - 24, 60, 8);
+      ctx.fillStyle = '#f59e0b';
+      ctx.font = '7px "Press Start 2P"';
+      ctx.fillText('宮殿', px - 8, py - 4);
+
+      // 3. N SEOUL TOWER (Namsan Mountain Peak)
+      const nx = 34 * TILE;
+      const ny = 16 * TILE;
+      // Mountain Base
+      ctx.fillStyle = '#15803d';
+      ctx.fillRect(nx - 20, ny - 10, 40, 20);
+      // Tower Stem & Spire
+      drawPixelBox(nx - 4, ny - 48, 8, 38, '#f8fafc', '#000000');
+      drawPixelBox(nx - 10, ny - 40, 20, 10, '#ef4444', '#000000');
+      // Spire Light
+      ctx.fillStyle = '#22c55e';
+      ctx.fillRect(nx - 2, ny - 56, 4, 8);
+    }
+
+    function renderPrecipitation(type) {
+      if (!type) return;
+
+      particles.forEach(p => {
+        p.y += p.speed;
+        if (p.y > height) {
+          p.y = -10;
+          p.x = Math.random() * width;
+        }
+
+        if (type === 'rain') {
+          ctx.strokeStyle = '#7dd3fc';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y);
+          ctx.lineTo(p.x - 2, p.y + p.length);
+          ctx.stroke();
+        } else if (type === 'snow') {
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(p.x, p.y, p.size, p.size);
+        }
+      });
+    }
+
+    function renderScene() {
+      const pal = WEATHER_PRESETS[activeWeatherKey];
+
+      // Sky Grounding
+      ctx.fillStyle = pal.bg;
+      ctx.fillRect(0, 0, width, height);
+
+      ctx.save();
+      ctx.translate(Math.floor(cameraX), Math.floor(cameraY));
+
+      // Draw Grid Base & City Streets
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          const x = c * TILE;
+          const y = r * TILE;
+
+          // Road Grid layout
+          const isMainRoadH = (r === 14 || r === 28 || r === 10 || r === 18 || r === 32);
+          const isMainRoadV = (c === 12 || c === 26 || c === 34 || c === 38 || c === 18);
+
+          if (isMainRoadH || isMainRoadV) {
+            ctx.fillStyle = pal.road;
+            ctx.fillRect(x, y, TILE, TILE);
+            
+            // Road dashes
+            if ((c % 2 === 0 && isMainRoadH) || (r % 2 === 0 && isMainRoadV)) {
+              ctx.fillStyle = '#facc15';
+              ctx.fillRect(x + 12, y + 14, 8, 4);
+            }
+          } else {
+            // Grass / Urban Plot
+            ctx.fillStyle = pal.grass;
+            ctx.fillRect(x, y, TILE, TILE);
+
+            if ((r + c) % 4 === 0) {
+              ctx.fillStyle = pal.grassPattern;
+              ctx.fillRect(x + 8, y + 8, 4, 4);
+            }
+          }
+        }
+      }
+
+      // Draw Landmarks
+      drawSeoulLandmarks(pal);
+
+      // TACO TRUCK ANIMATION
+      updateTruck();
+
+      // Truck Shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.3)';
+      ctx.fillRect(truckX - 20, truckY + 10, 44, 8);
+
+      // Salsa Red Truck Body
+      drawPixelBox(truckX - 20, truckY - 16, 40, 24, '#ff5964', '#000000');
+      
+      // Windshield
+      ctx.fillStyle = pal.window;
+      ctx.fillRect(truckX + 8, truckY - 12, 10, 14);
+      ctx.strokeStyle = '#000000';
+      ctx.strokeRect(truckX + 8, truckY - 12, 10, 14);
+
+      // Roof Sign
+      drawPixelBox(truckX - 14, truckY - 28, 28, 10, '#ffca3a', '#000000');
+      ctx.fillStyle = '#000000';
+      ctx.font = '7px "Press Start 2P"';
+      ctx.fillText('TACO', truckX - 10, truckY - 20);
+
+      // Animated Flag Pin
+      const bounceY = Math.sin(Date.now() / 180) * 4;
+      ctx.fillStyle = '#ff5964';
+      ctx.fillRect(truckX - 4, truckY - 42 + bounceY, 8, 8);
+      ctx.strokeStyle = '#000000';
+      ctx.strokeRect(truckX - 4, truckY - 42 + bounceY, 8, 8);
+
+      ctx.restore();
+
+      // Overlay Weather Particles
+      renderPrecipitation(pal.precip);
+
+      requestAnimationFrame(renderScene);
+    }
+
+    // Initialize
+    autoDetectTimeOfDay();
+    renderMenu();
+    renderScene();
+  </script>
+</body>
+</html>

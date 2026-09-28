@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>TacoTaco - Seoul Live GPS & Pixel Food Truck</title>
+  
+  <!-- Leaflet CSS for Real Map Engine -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <!-- Typography: Press Start 2P & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,600;0,700;0,800;1,400&family=Press+Start+2P&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    :root {
+      --app-height: 100dvh;
+    }
+
+    * {
+      font-family: 'JetBrains Mono', monospace;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      box-sizing: border-box;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      height: var(--app-height);
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: #0f172a;
+      touch-action: manipulation;
+    }
+
+    .font-arcade {
+      font-family: 'Press Start 2P', cursive, monospace;
+    }
+
+    /* Core Pixelated Map Filter */
+    .pixelated-map .leaflet-tile-container img {
+      image-rendering: pixelated !important;
+      image-rendering: crisp-edges !important;
+      filter: contrast(125%) saturate(155%) hue-rotate(-5deg);
+    }
+
+    .pixelated-map .leaflet-container {
+      background: #1e293b;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Vibrant Chunky Retro Arcade Glass Box */
+    .pixel-box-vibrant {
+      background: rgba(255, 251, 232, 0.96);
+      border: clamp(2px, 0.8vw, 4px) solid #000;
+      box-shadow: 
+        inset 0 0 0 2px #fff,
+        0 0 0 2px #000,
+        3px 4px 0 0 rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(4px);
+    }
+
+    .pixel-btn {
+      border: 2px solid #000;
+      min-height: 36px;
+      touch-action: manipulation;
+      transition: transform 0.05s ease, box-shadow 0.05s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .pixel-btn:active {
+      transform: translate(2px, 2px) !important;
+      box-shadow: 1px 1px 0 0 #000 !important;
+    }
+
+    .pixel-btn-sun {
+      background: #ff5964;
+      color: #ffffff;
+      box-shadow: inset -2px -2px 0px 0px #b81d28, inset 2px 2px 0px 0px #ff9aa2, 3px 3px 0 0 #000;
+      transition: all 0.05s ease;
+    }
+    .pixel-btn-sun:active {
+      transform: translate(2px, 2px);
+      box-shadow: inset 2px 2px 0px 0px #b81d28, 1px 1px 0 0 #000;
+    }
+
+    .pixel-btn-sky {
+      background: #35a7ff;
+      color: #ffffff;
+      border: 2px solid #000;
+      box-shadow: inset -2px -2px 0px 0px #0066b8, inset 2px 2px 0px 0px #85ccff, 2px 2px 0 0 #000;
+    }
+
+    /* CRT Scanline Overlay */
+    .scanlines {
+      background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.12) 50%, rgba(0,0,0,0.12));
+      background-size: 100% 4px;
+      pointer-events: none;
+    }
+
+    .location-btn {
+      border: 2px solid #000;
+      box-shadow: 2px 2px 0 0 #000;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 2px;
+    }
+
+    .pixel-scroll::-webkit-scrollbar { width: 10px; }
+    .pixel-scroll::-webkit-scrollbar-track { background: #ffeaa7; border-left: 2px solid #000; }
+    .pixel-scroll::-webkit-scrollbar-thumb { background: #ff5964; border: 2px solid #000; }
+
+    .weather-vignette { pointer-events: none; transition: background 1.5s ease; }
+
+    /* TRUCK MARKER STYLES */
+    .truck-marker-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+
+    .truck-speech {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 800;
+      font-size: 11px;
+      background: #ffffff;
+      color: #000000;
+      padding: 3px 8px;
+      border: 2px solid #000000;
+      box-shadow: 2px 2px 0 0 #000;
+      white-space: nowrap;
+      margin-bottom: 2px;
+      animation: floatSpeech 2s infinite ease-in-out;
+    }
+    .truck-speech::after {
+      content: '';
+      position: absolute;
+      bottom: -6px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-width: 6px 5px 0;
+      border-style: solid;
+      border-color: #000000 transparent;
+      display: block;
+      width: 0;
+    }
+
+    @keyframes floatSpeech {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-4px); }
+    }
+
+    .pixel-truck-emoji {
+      font-size: 42px;
+      line-height: 1;
+      filter: drop-shadow(0px 4px 0px rgba(0,0,0,0.7));
+    }
+
+    /* SCENE IN HOLIDAY MODAL */
+    .modal-scene-container {
+      position: relative;
+      width: 100%;
+      height: 180px;
+      background: linear-gradient(180deg, #38bdf8 0%, #38bdf8 65%, #4ade80 65%, #22c55e 100%);
+      border: 3px solid #000;
+      box-shadow: inset 0 0 0 2px #fff, 3px 3px 0 0 #000;
+      overflow: hidden;
+    }
+
+    /* TRUCK BEHIND CHARACTER */
+    .modal-truck-background {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      z-index: 1;
+    }
+
+    .modal-truck-svg {
+      width: 180px;
+      height: 100px;
+      filter: drop-shadow(2px 3px 0px rgba(0,0,0,0.4));
+      animation: truckBounce 1.8s infinite ease-in-out;
+    }
+
+    @keyframes truckBounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-3px); }
+    }
+
+    /* ANIMATED MAPLESTORY STYLE CHARACTER IN FRONT */
+    .pixel-character-container {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      animation: characterMapleBounce 1.6s infinite ease-in-out;
+    }
+
+    @keyframes characterMapleBounce {
+      0%, 100% { transform: translateX(-50%) translateY(0); }
+      50% { transform: translateX(-50%) translateY(-5px); }
+    }
+
+    .pixel-character-svg {
+      width: 90px;
+      height: 95px;
+      filter: drop-shadow(2px 3px 0px rgba(0,0,0,0.45));
+    }
+  </style>
+</head>
+<body class="bg-[#0f172a] text-black overflow-hidden w-screen h-screen relative select-none">
+
+  <!-- Map Container -->
+  <div id="map" class="absolute inset-0 w-full h-full pixelated-map z-0"></div>
+
+  <!-- CRT Overlay & Weather Canvas -->
+  <div class="scanlines fixed inset-0 z-10"></div>
+  <div id="weatherVignette" class="weather-vignette fixed inset-0 z-20"></div>
+  <canvas id="precipCanvas" class="fixed inset-0 z-20 pointer-events-none"></canvas>
+
+  <!-- TOP CENTER NOTICE BADGE -->
+  <div id="noticeContainer" class="fixed top-3 left-1/2 -translate-x-1/2 z-40 pointer-events-auto flex flex-col items-center">
+    <button id="noticeBadgeBtn" onclick="handleNoticeClick()" class="pixel-box-vibrant px-4 py-2 flex items-center gap-2.5 cursor-pointer hover:scale-105 transition-transform bg-[#ffd166]">
+      <span class="w-3 h-3 rounded-full bg-emerald-500 animate-ping inline-block shrink-0"></span>
+      <span class="font-bold text-sm sm:text-base text-black tracking-tight flex items-center gap-1.5">
+        📢 <span id="noticeBadgeTextKorean" class="font-black text-black text-base sm:text-lg">공지!</span>
+        <span id="noticeBadgeTextEnglish" class="font-arcade text-xs sm:text-sm text-red-600 ml-0.5">NOTICE</span>
+      </span>
+    </button>
+
+    <!-- Desktop Center Notice Dropdown Panel -->
+    <div id="desktopNoticePanel" class="hidden mt-2 w-80 sm:w-96 pixel-box-vibrant p-3.5 bg-amber-50 shadow-2xl border-3 border-black">
+      <div class="flex items-center justify-between border-b-2 border-black pb-1.5 mb-2">
+        <span class="font-bold text-sm text-red-600 flex items-center gap-1.5">
+          📢 <span id="noticePanelTitle">공지사항 (NOTICE)</span>
+        </span>
+        <button onclick="toggleDesktopNotice(false)" class="text-xs font-bold px-2 py-0.5 bg-red-500 hover:bg-red-600 border-2 border-black text-white cursor-pointer shadow-[1px_1px_0_0_#000]">X</button>
+      </div>
+      <p id="noticeContentText" class="text-xs text-gray-900 font-bold leading-relaxed whitespace-pre-line">
+        🌮 [오늘의 스팟] 홍대입구역 9번 출구 앞 정상 영업 중!
+        🔥 인기 메뉴 '비리아 퀘사 타코' 조기 품절될 수 있습니다.
+      </p>
+      
+      <!-- Footer with "오늘 하루 동안 보지 않기" Checkbox -->
+      <div class="mt-3 border-t border-black/20 pt-2 flex items-center justify-between">
+        <label class="flex items-center gap-1.5 text-[11px] font-bold text-gray-800 cursor-pointer select-none">
+          <input type="checkbox" onchange="dismissNoticeForToday(this.checked)" class="w-3.5 h-3.5 accent-red-600 border-2 border-black cursor-pointer">
+          <span>오늘 하루 동안 보지 않기</span>
+        </label>
+
+        <div class="flex gap-1.5">
+          <button onclick="editNotice()" class="text-[10px] bg-sky-200 border border-black px-2 py-1 font-bold hover:bg-sky-300">✏️ 수정</button>
+          <button onclick="toggleDesktopNotice(false)" class="text-[10px] bg-amber-200 border border-black px-2 py-1 font-bold hover:bg-amber-300">닫기</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOBILE COMPACT HEADER (< 640px) -->
+  <div class="sm:hidden fixed top-2 left-2 right-2 z-30 flex items-center justify-between gap-1 pointer-events-auto">
+    <div class="pixel-box-vibrant px-2 py-1 flex items-center gap-1.5 flex-1 min-w-0">
+      <span id="weatherIconMobile" class="text-sm">📡</span>
+      <div class="flex flex-col min-w-0">
+        <span id="seoulSpotBadgeMobile" class="font-bold text-[10px] truncate text-black leading-tight">HONGDAE</span>
+        <span id="tempDisplayMobile" class="text-[9px] text-gray-700 font-medium leading-tight">--°C</span>
+      </div>
+    </div>
+
+    <!-- Language Selector Mobile -->
+    <select id="langSelectMobile" onchange="changeLanguage(this.value)" class="bg-amber-300 border-2 border-black text-[10px] font-bold p-1">
+      <option value="ko">🇰🇷 한국어</option>
+      <option value="en">🇺🇸 English</option>
+      <option value="fr">🇫🇷 Français</option>
+      <option value="es">🇪🇸 Español</option>
+      <option value="ja">🇯🇵 日本語</option>
+      <option value="de">🇩🇪 Deutsch</option>
+      <option value="it">🇮🇹 Italiano</option>
+    </select>
+
+    <button onclick="toggleMenu(true)" class="pixel-btn-sun px-2.5 py-1.5 flex items-center gap-1 font-arcade text-[8px] border-2 border-black shrink-0">
+      <span>🌮</span>
+      <span id="menuBtnTextMobile">MENU</span>
+    </button>
+  </div>
+
+  <!-- DESKTOP TOP-LEFT HUD (>= 640px) -->
+  <div class="hidden sm:flex fixed top-4 left-4 z-30 pointer-events-auto flex-col gap-2">
+    <div class="pixel-box-vibrant p-3 max-w-xs flex flex-col gap-2">
+      <div class="flex items-center justify-between border-b-2 border-black pb-1.5">
+        <span class="font-arcade text-[9px] text-black flex items-center gap-1">
+          <i data-lucide="map" class="w-3.5 h-3.5 text-red-600"></i> SEOUL GPS
+        </span>
+        <span id="seoulSpotBadge" class="bg-amber-400 text-black px-2 py-0.5 text-[9px] font-arcade border border-black font-bold">
+          HONGDAE
+        </span>
+      </div>
+
+      <div class="flex items-center justify-between text-xs pt-0.5">
+        <span class="font-bold text-gray-800 flex items-center gap-1.5">
+          <span id="weatherIconDisplay">📡</span> <span id="lblWeather">날씨:</span>
+        </span>
+        <span id="weatherStatusText" class="font-bold text-emerald-700 text-xs">SYNCING...</span>
+      </div>
+
+      <div class="text-xs text-gray-700 flex justify-between items-center border-t border-gray-300 pt-1.5 mt-0.5">
+        <span><span id="lblTemp">온도:</span> <strong id="tempDisplay" class="text-black font-bold">--°C</strong></span>
+        
+        <!-- Language Selector Desktop -->
+        <select id="langSelectDesktop" onchange="changeLanguage(this.value)" class="bg-amber-200 border border-black text-xs font-bold px-1.5 py-0.5">
+          <option value="ko">🌐 한국어</option>
+          <option value="en">🌐 English</option>
+          <option value="fr">🌐 Français</option>
+          <option value="es">🌐 Español</option>
+          <option value="ja">🌐 日本語</option>
+          <option value="de">🌐 Deutsch</option>
+          <option value="it">🌐 Italiano</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Location Jump Buttons & Visitor Stats -->
+    <div class="pixel-box-vibrant p-2 flex flex-col gap-1.5 max-w-xs">
+      <span class="font-bold text-[10px] text-gray-800" id="lblSeoulSpots">📍 스팟 이동 (SEOUL SPOTS):</span>
+      <div class="flex flex-wrap gap-1">
+        <button onclick="moveToSpot(0)" class="location-btn bg-orange-100 text-black">홍대</button>
+        <button onclick="moveToSpot(1)" class="location-btn bg-red-100 text-black">경복궁</button>
+        <button onclick="moveToSpot(2)" class="location-btn bg-green-100 text-black">남산</button>
+        <button onclick="moveToSpot(3)" class="location-btn bg-blue-100 text-black">강남</button>
+        <button onclick="moveToSpot(4)" class="location-btn bg-purple-100 text-black">여의도</button>
+      </div>
+
+      <!-- Visitor Counter Stats -->
+      <div class="border-t border-black pt-1.5 mt-1 flex items-center justify-between text-[11px] font-bold">
+        <span class="text-gray-700">👀 <span id="lblVisits">방문자:</span> <strong id="totalVisitsCount" class="text-blue-600">--</strong></span>
+        <span class="text-gray-700">🔄 <span id="lblRevisits">재방문:</span> <strong id="revisitsCount" class="text-emerald-600">--</strong></span>
+      </div>
+
+      <!-- Holiday Modal Open Button -->
+      <button onclick="toggleHolidayModal(true)" class="mt-1 bg-pink-200 border border-black text-[10px] font-bold py-1 px-2 hover:bg-pink-300 text-center flex items-center justify-center gap-1 cursor-pointer">
+        <span>🎎</span> <span id="btnHolidayToggle">명절/공휴일 인사 팝업 보기</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- DESKTOP TOP-RIGHT HUD (>= 640px) -->
+  <div class="hidden sm:flex fixed top-4 right-4 z-30 flex-col items-end gap-3 max-w-xs sm:max-w-sm pointer-events-auto">
+    <div class="pixel-box-vibrant p-3.5 w-full text-xs text-black flex flex-col gap-2.5">
+      <div class="flex items-center justify-between border-b-2 border-black pb-2 px-1">
+        <span class="flex items-center gap-2 font-arcade text-[10px] text-emerald-700 font-bold">
+          <span class="inline-block w-2.5 h-2.5 bg-emerald-500 rounded-none animate-ping"></span>
+          LIVE TRACKER
+        </span>
+        <span class="bg-[#ff5964] text-white px-2.5 py-1 text-[9px] font-arcade tracking-wider border-2 border-black shadow-[2px_2px_0_0_#000] ml-6">
+          COOKING 🌮
+        </span>
+      </div>
+      
+      <div class="flex items-center justify-between text-xs pt-0.5">
+        <span class="flex items-center gap-1.5 font-bold text-gray-700">
+          <i data-lucide="map-pin" class="w-4 h-4 text-red-600"></i>
+          <span id="lblCurrentLoc">현재 위치:</span>
+        </span>
+        <span id="locationName" class="text-black font-bold truncate max-w-[180px]">Hongdae St. Exit 9</span>
+      </div>
+
+      <div class="flex items-center justify-between bg-[#ffeaa7] p-2 border-2 border-black shadow-[2px_2px_0_0_#000]">
+        <span class="text-xs text-black font-bold flex items-center gap-1">
+          <i data-lucide="clock" class="w-3.5 h-3.5 text-red-600"></i> <span id="lblTimeLeft">남은 시간:</span>
+        </span>
+        <span id="countdownTimer" class="font-arcade text-red-600 text-xs tracking-widest font-bold">01:42:19</span>
+      </div>
+    </div>
+
+    <button onclick="toggleMenu(true)" class="pixel-btn-sun px-4 py-3 rounded-none flex items-center gap-2.5 font-arcade text-xs border-2 border-black cursor-pointer group">
+      <span class="text-xl group-hover:scale-125 transition-transform">🌮</span>
+      <span class="tracking-wider text-white" id="btnOpenMenu">OPEN MENU</span>
+    </button>
+  </div>
+
+  <!-- MOBILE BOTTOM DRAWER HUD (< 640px) -->
+  <div class="sm:hidden fixed bottom-3 left-2 right-2 z-30 pointer-events-auto flex flex-col gap-2">
+    <div class="pixel-box-vibrant p-2.5 flex flex-col gap-2">
+      <div class="flex items-center justify-between text-xs border-b-2 border-black pb-2">
+        <div class="flex items-center gap-1 min-w-0 font-bold text-black">
+          <i data-lucide="map-pin" class="w-4 h-4 text-red-600 shrink-0"></i>
+          <span id="locationNameMobile" class="truncate text-[12px]">Hongdae St. Exit 9</span>
+        </div>
+        <span id="countdownTimerMobile" class="font-arcade text-red-600 text-[10px] shrink-0 font-bold bg-amber-100 px-1.5 py-0.5 border border-black">01:42:19</span>
+      </div>
+
+      <div class="flex items-center justify-between text-[10px] font-bold">
+        <span>👀 <span id="lblVisitsMobile">방문:</span> <strong id="totalVisitsCountMobile" class="text-blue-600">--</strong></span>
+        <span>🔄 <span id="lblRevisitsMobile">재방문:</span> <strong id="revisitsCountMobile" class="text-emerald-600">--</strong></span>
+        <button onclick="toggleHolidayModal(true)" class="bg-pink-200 border border-black px-1.5 py-0.5 font-bold">🎎 명절 인사</button>
+      </div>
+
+      <div class="flex items-center gap-1 overflow-x-auto pixel-scroll pb-1">
+        <button onclick="moveToSpot(0)" class="location-btn bg-orange-100 text-black shrink-0">홍대</button>
+        <button onclick="moveToSpot(1)" class="location-btn bg-red-100 text-black shrink-0">경복궁</button>
+        <button onclick="moveToSpot(2)" class="location-btn bg-green-100 text-black shrink-0">남산</button>
+        <button onclick="moveToSpot(3)" class="location-btn bg-blue-100 text-black shrink-0">강남</button>
+        <button onclick="moveToSpot(4)" class="location-btn bg-purple-100 text-black shrink-0">여의도</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HOLIDAY GREETING POPUP MODAL -->
+  <div id="holidayModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 hidden">
+    <div class="pixel-box-vibrant w-full max-w-sm sm:max-w-md p-5 bg-[#fff8e7] flex flex-col items-center text-center relative border-4 border-black">
+      <button onclick="toggleHolidayModal(false)" class="absolute top-2 right-2 pixel-btn-sun px-2 py-0.5 text-xs font-bold cursor-pointer">X</button>
+      
+      <div class="text-xs font-bold bg-[#ffca3a] px-3 py-1 border border-black mb-3">
+        🎎 <span id="holidayModalHeader">HAPPY HOLIDAYS</span>
+      </div>
+
+      <!-- Animated Scene: Pixel Food Truck Background + MapleStory Style Pixel Character Foreground -->
+      <div class="modal-scene-container w-full my-1 rounded-none">
+        <!-- SVG Pixel Food Truck in Scene Background -->
+        <div class="modal-truck-background">
+          <svg class="modal-truck-svg" viewBox="0 0 160 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Truck Main Body -->
+            <rect x="10" y="25" width="115" height="50" fill="#ff5964" stroke="#000" stroke-width="3"/>
+            <rect x="125" y="40" width="30" height="35" fill="#ffd166" stroke="#000" stroke-width="3"/>
+            <!-- Truck Roof & Awning -->
+            <rect x="10" y="18" width="145" height="8" fill="#000"/>
+            <rect x="15" y="20" width="20" height="5" fill="#ffffff"/>
+            <rect x="35" y="20" width="20" height="5" fill="#ff5964"/>
+            <rect x="55" y="20" width="20" height="5" fill="#ffffff"/>
+            <rect x="75" y="20" width="20" height="5" fill="#ff5964"/>
+            <rect x="95" y="20" width="20" height="5" fill="#ffffff"/>
+            <rect x="115" y="20" width="20" height="5" fill="#ff5964"/>
+            <rect x="135" y="20" width="18" height="5" fill="#ffffff"/>
+            <!-- Service Window -->
+            <rect x="25" y="33" width="60" height="24" fill="#35a7ff" stroke="#000" stroke-width="2"/>
+            <rect x="25" y="33" width="28" height="24" fill="#85ccff"/>
+            <rect x="20" y="56" width="70" height="4" fill="#000"/>
+            <!-- Taco Sign Board on Truck -->
+            <rect x="92" y="32" width="28" height="18" fill="#ffffff" stroke="#000" stroke-width="2"/>
+            <text x="96" y="45" font-family="monospace" font-weight="900" font-size="10" fill="#000">TACO</text>
+            <!-- Wheels -->
+            <circle cx="38" cy="76" r="11" fill="#000"/>
+            <circle cx="38" cy="76" r="5" fill="#e2e8f0" stroke="#000" stroke-width="2"/>
+            <circle cx="122" cy="76" r="11" fill="#000"/>
+            <circle cx="122" cy="76" r="5" fill="#e2e8f0" stroke="#000" stroke-width="2"/>
+            <!-- Headlight & Details -->
+            <rect x="150" y="48" width="5" height="8" fill="#ef4444" stroke="#000" stroke-width="1"/>
+          </svg>
+        </div>
+
+        <!-- Animated SVG MapleStory-Style Cute Pixel Character -->
+        <div class="pixel-character-container">
+          <svg class="pixel-character-svg" viewBox="0 0 90 95" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Cute Royal Gold Crown / Hat -->
+            <path d="M28 20 L35 10 L45 18 L55 10 L62 20 Z" fill="#fbbf24" stroke="#000" stroke-width="2"/>
+            <circle cx="35" cy="11" r="2.5" fill="#ef4444" stroke="#000" stroke-width="1"/>
+            <circle cx="45" cy="18" r="2.5" fill="#3b82f6" stroke="#000" stroke-width="1"/>
+            <circle cx="55" cy="11" r="2.5" fill="#ef4444" stroke="#000" stroke-width="1"/>
+            <rect x="27" y="19" width="36" height="5" fill="#f59e0b" stroke="#000" stroke-width="1.5"/>
+
+            <!-- MapleStory Big Round Face -->
+            <rect x="18" y="24" width="54" height="38" rx="14" fill="#ffebd7" stroke="#000" stroke-width="2.5"/>
+            
+            <!-- Fluffy Front Hair Bangs -->
+            <path d="M 20 28 Q 28 38 36 30 Q 45 40 54 30 Q 62 38 70 28 Q 65 21 45 22 Q 25 21 20 28 Z" fill="#472e18" stroke="#000" stroke-width="2"/>
+
+            <!-- Cute Large Sparkly Anime Eyes (Maple Style) -->
+            <!-- Left Eye -->
+            <rect x="27" y="36" width="10" height="13" rx="4" fill="#1e1b4b" stroke="#000" stroke-width="1.5"/>
+            <circle cx="30" cy="39" r="2.5" fill="#ffffff"/>
+            <circle cx="33" cy="44" r="1.2" fill="#ffffff"/>
+            <!-- Right Eye -->
+            <rect x="53" y="36" width="10" height="13" rx="4" fill="#1e1b4b" stroke="#000" stroke-width="1.5"/>
+            <circle cx="56" cy="39" r="2.5" fill="#ffffff"/>
+            <circle cx="59" cy="44" r="1.2" fill="#ffffff"/>
+
+            <!-- Rosy Soft Cheeks -->
+            <ellipse cx="25" cy="48" rx="4.5" ry="2.5" fill="#fb7185" opacity="0.85"/>
+            <ellipse cx="65" cy="48" rx="4.5" ry="2.5" fill="#fb7185" opacity="0.85"/>
+
+            <!-- Tiny Smile -->
+            <path d="M 42 47 Q 45 50 48 47" stroke="#000" stroke-width="2" stroke-linecap="round" fill="none"/>
+
+            <!-- Inner White Hanbok Collar -->
+            <polygon points="39,61 45,67 51,61" fill="#ffffff" stroke="#000" stroke-width="1.5"/>
+
+            <!-- Chubby Petit Body (Red Royal Hanbok / Outfit) -->
+            <path d="M 28 61 L 62 61 L 68 82 L 22 82 Z" fill="#dc2626" stroke="#000" stroke-width="2.5"/>
+            <!-- Golden Emblem Crest -->
+            <circle cx="45" cy="71" r="5" fill="#f59e0b" stroke="#000" stroke-width="1.5"/>
+            <circle cx="45" cy="71" r="2.5" fill="#fef08a"/>
+
+            <!-- Cute Small Hands Holding a Mini Taco -->
+            <circle cx="24" cy="70" r="4.5" fill="#ffebd7" stroke="#000" stroke-width="1.5"/>
+            <circle cx="66" cy="70" r="4.5" fill="#ffebd7" stroke="#000" stroke-width="1.5"/>
+            
+            <!-- Mini Taco Item in Hand -->
+            <path d="M 64 64 C 64 58, 76 58, 76 64 Z" fill="#fde047" stroke="#000" stroke-width="1.5"/>
+            <rect x="67" y="62" width="6" height="2" fill="#22c55e"/>
+            <rect x="69" y="61" width="3" height="2" fill="#ef4444"/>
+
+            <!-- Little Feet / Shoes -->
+            <rect x="31" y="82" width="10" height="6" rx="3" fill="#000"/>
+            <rect x="49" y="82" width="10" height="6" rx="3" fill="#000"/>
+          </svg>
+        </div>
+      </div>
+
+      <h2 id="holidayGreetingTitle" class="text-base sm:text-lg font-extrabold text-red-600 my-2 leading-tight">
+        풍성한 한가위 되세요!
+      </h2>
+
+      <p id="holidayGreetingDesc" class="text-xs text-gray-800 font-bold leading-relaxed mb-4">
+        즐거운 명절을 맞아 타코타코 푸드트럭을 찾아주신 모든 분들께 감사드립니다.<br>맛있는 타코와 함께 따뜻한 시간 보내세요!
+      </p>
+
+      <button onclick="toggleHolidayModal(false)" class="pixel-btn-sun px-6 py-2 text-xs font-bold w-full cursor-pointer">
+        확인 (Close)
+      </button>
+    </div>
+  </div>
+
+  <!-- MOBILE NOTICE MODAL -->
+  <div id="noticeModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-sm p-4 hidden">
+    <div class="pixel-box-vibrant w-full max-w-md p-4 bg-amber-50">
+      <div class="flex items-center justify-between border-b-2 border-black pb-2 mb-3">
+        <h3 class="font-bold text-sm text-red-600 flex items-center gap-1.5">
+          📢 <span id="noticeModalTitle">공지사항 (NOTICE)</span>
+        </h3>
+        <button onclick="toggleMobileNotice(false)" class="pixel-btn-sun px-2 py-0.5 text-xs font-bold cursor-pointer">X</button>
+      </div>
+      <p id="noticeModalContent" class="text-xs text-gray-900 font-bold leading-relaxed whitespace-pre-line mb-4">
+        🌮 [오늘의 스팟] 홍대입구역 9번 출구 앞 정상 영업 중!
+        🔥 인기 메뉴 '비리아 퀘사 타코' 조기 품절될 수 있습니다.
+      </p>
+      
+      <div class="mt-3 border-t border-black/20 pt-2 flex items-center justify-between">
+        <label class="flex items-center gap-1.5 text-[11px] font-bold text-gray-800 cursor-pointer select-none">
+          <input type="checkbox" onchange="dismissNoticeForToday(this.checked)" class="w-3.5 h-3.5 accent-red-600 border-2 border-black cursor-pointer">
+          <span>오늘 하루 동안 보지 않기</span>
+        </label>
+
+        <div class="flex gap-1.5">
+          <button onclick="editNotice()" class="pixel-btn-sky px-3 py-1 text-xs font-bold cursor-pointer">✏️ 수정</button>
+          <button onclick="toggleMobileNotice(false)" class="pixel-btn-sun px-3 py-1 text-xs font-bold cursor-pointer">닫기</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MENU MODAL -->
+  <div id="menuModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-sm p-3 sm:p-4 hidden">
+    <div class="pixel-box-vibrant w-full max-w-2xl max-h-[90vh] flex flex-col text-black relative">
+      <div class="bg-[#ffca3a] border-b-3 border-black p-3 sm:p-4 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="text-xl sm:text-2xl">🌮</span>
+          <h2 id="modalTitle" class="font-arcade text-black text-[10px] sm:text-xs tracking-wider">TACOTACO MENU [PAGE 1/2]</h2>
+        </div>
+        <button onclick="toggleMenu(false)" class="pixel-btn-sun px-2.5 py-1 text-xs font-arcade text-white cursor-pointer">X</button>
+      </div>
+
+      <!-- Page 1: Menu Items -->
+      <div id="page1" class="p-3 sm:p-4 overflow-y-auto pixel-scroll flex-1 space-y-3 bg-[#fffbe8]">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="menuGrid"></div>
+      </div>
+
+      <!-- Page 2: Ingredient Origin Table -->
+      <div id="page2" class="p-3 sm:p-4 overflow-y-auto pixel-scroll flex-1 space-y-4 bg-[#fffbe8] hidden">
+        <div class="border-2 border-black bg-white p-1 shadow-[2px_2px_0_0_#000]">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr class="bg-[#ffca3a] text-black border-b-2 border-black text-[10px] font-arcade">
+                <th class="p-2" id="thIngredient">재료 (Item)</th>
+                <th class="p-2" id="thOrigin">원산지 (Origin)</th>
+                <th class="p-2" id="thNotes">비고 (Notes)</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200" id="originTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Footer Nav -->
+      <div class="bg-[#ffca3a] border-t-3 border-black p-3 flex items-center justify-between">
+        <button id="prevBtn" onclick="changePage(-1)" disabled class="pixel-btn-sky opacity-50 px-3 py-1.5 text-[10px] font-arcade cursor-not-allowed">◀ PREV</button>
+        <div class="text-xs font-bold text-black font-arcade" id="pageIndicator">PG 1 / 2</div>
+        <button id="nextBtn" onclick="changePage(1)" class="pixel-btn-sky px-3 py-1.5 text-[10px] font-arcade cursor-pointer">NEXT ➔</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script>
+    lucide.createIcons();
+
+    // 1. MULTILINGUAL DICTIONARY
+    const translations = {
+      ko: {
+        noticeKor: "공지!",
+        noticeTitle: "공지사항 (NOTICE)",
+        menuBtn: "MENU",
+        openMenu: "OPEN MENU",
+        weather: "날씨:",
+        temp: "온도:",
+        seoulSpots: "📍 스팟 이동 (SEOUL SPOTS):",
+        currentLoc: "현재 위치:",
+        timeLeft: "남은 시간:",
+        visits: "방문자:",
+        revisits: "재방문:",
+        holidayBtn: "명절 인사 팝업 보기",
+        holidayHeader: "명절 특별 인사",
+        holidayTitle: "풍성한 한가위 되세요!",
+        holidayDesc: "즐거운 명절을 맞아 타코타코 푸드트럭을 찾아주신 모든 분들께 감사드립니다. 맛있는 타코와 함께 따뜻한 시간 보내세요!",
+        thIngredient: "재료 (Item)",
+        thOrigin: "원산지 (Origin)",
+        thNotes: "비고 (Notes)"
+      },
+      en: {
+        noticeKor: "ANNOUNCEMENT",
+        noticeTitle: "NOTICE & ANNOUNCEMENTS",
+        menuBtn: "MENU",
+        openMenu: "OPEN MENU",
+        weather: "Weather:",
+        temp: "Temp:",
+        seoulSpots: "📍 JUMP SPOTS:",
+        currentLoc: "Current:",
+        timeLeft: "Time Left:",
+        visits: "Total Visits:",
+        revisits: "Revisits:",
+        holidayBtn: "Holiday Greeting Popup",
+        holidayHeader: "HAPPY HOLIDAYS",
+        holidayTitle: "Happy Chuseok Holidays!",
+        holidayDesc: "Thank you for visiting TacoTaco food truck during this holiday season. Enjoy delicious tacos with your loved ones!",
+        thIngredient: "Ingredient",
+        thOrigin: "Origin",
+        thNotes: "Notes"
+      },
+      fr: {
+        noticeKor: "AVIS",
+        noticeTitle: "ANNONCES (NOTICE)",
+        menuBtn: "MENU",
+        openMenu: "OUVRIR MENU",
+        weather: "Météo:",
+        temp: "Temp:",
+        seoulSpots: "📍 EMPLACEMENTS:",
+        currentLoc: "Position:",
+        timeLeft: "Temps rest:",
+        visits: "Visites:",
+        revisits: "Revisites:",
+        holidayBtn: "Message de Fêtes",
+        holidayHeader: "JOYEUSES FÊTES",
+        holidayTitle: "Joyeuses Fêtes de Chuseok!",
+        holidayDesc: "Merci de visiter le food truck TacoTaco pendant ces fêtes. Profitez de délicieux tacos !",
+        thIngredient: "Ingrédient",
+        thOrigin: "Origine",
+        thNotes: "Notes"
+      },
+      es: {
+        noticeKor: "AVISO",
+        noticeTitle: "ANUNCIOS (NOTICE)",
+        menuBtn: "MENÚ",
+        openMenu: "VER MENÚ",
+        weather: "Clima:",
+        temp: "Temp:",
+        seoulSpots: "📍 UBICACIONES:",
+        currentLoc: "Ubicación:",
+        timeLeft: "Restante:",
+        visits: "Visitas:",
+        revisits: "Revisitas:",
+        holidayBtn: "Saludo de Fiestas",
+        holidayHeader: "FELICES FIESTAS",
+        holidayTitle: "¡Felices Fiestas de Chuseok!",
+        holidayDesc: "¡Gracias por visitar TacoTaco durante estas vacaciones! Disfruta de deliciosos tacos con tus seres queridos.",
+        thIngredient: "Ingrediente",
+        thOrigin: "Origen",
+        thNotes: "Notas"
+      },
+      ja: {
+        noticeKor: "お知らせ",
+        noticeTitle: "お知らせ (NOTICE)",
+        menuBtn: "メニュー",
+        openMenu: "メニューを見る",
+        weather: "天気:",
+        temp: "気温:",
+        seoulSpots: "📍 스팟 이동:",
+        currentLoc: "現在地:",
+        timeLeft: "残り時間:",
+        visits: "訪問者:",
+        revisits: "再訪問:",
+        holidayBtn: "祝日挨拶ポップアップ",
+        holidayHeader: "ハッピー ホリデー",
+        holidayTitle: "楽しい秋夕をお過ごしください！",
+        holidayDesc: "楽しい秋夕にTacoTacoフードトラックを訪れていただきありがとうございます。美味しいタコをお楽しみください！",
+        thIngredient: "메뉴",
+        thOrigin: "産地",
+        thNotes: "備考"
+      },
+      de: {
+        noticeKor: "HINWEIS",
+        noticeTitle: "ANKÜNDIGUNGEN (NOTICE)",
+        menuBtn: "MENÜ",
+        openMenu: "MENÜ ÖFFNEN",
+        weather: "Wetter:",
+        temp: "Temp:",
+        seoulSpots: "📍 ORTE:",
+        currentLoc: "Standort:",
+        timeLeft: "Restzeit:",
+        visits: "Besuche:",
+        revisits: "Wiederholungen:",
+        holidayBtn: "Feiertagsgrüße",
+        holidayHeader: "SCHÖNE FEIERTAGEN",
+        holidayTitle: "Frohes Chuseok-Fest!",
+        holidayDesc: "Vielen Dank für Ihren Besuch beim TacoTaco Foodtruck während der Feiertage. Genießen Sie leckere Tacos!",
+        thIngredient: "Zutat",
+        thOrigin: "Herkunft",
+        thNotes: "Hinweise"
+      },
+      it: {
+        noticeKor: "AVVISO",
+        noticeTitle: "AVVISI (NOTICE)",
+        menuBtn: "MENU",
+        openMenu: "APRI MENU",
+        weather: "Meteo:",
+        temp: "Temp:",
+        seoulSpots: "📍 POSIZIONI:",
+        currentLoc: "Posizione:",
+        timeLeft: "Rimanente:",
+        visits: "Visite:",
+        revisits: "Rivisite:",
+        holidayBtn: "Auguri di Festa",
+        holidayHeader: "BUONE FESTE",
+        holidayTitle: "Buone Feste di Chuseok!",
+        holidayDesc: "Grazie per aver visitato il food truck TacoTaco durante queste feste. Gustatevi deliziosi taco!",
+        thIngredient: "Ingrediente",
+        thOrigin: "Origine",
+        thNotes: "Note"
+      }
+    };
+
+    let currentLang = 'ko';
+
+    function changeLanguage(lang) {
+      currentLang = lang;
+      const t = translations[lang] || translations.ko;
+
+      document.getElementById('noticeBadgeTextKorean').innerText = t.noticeKor;
+      document.getElementById('noticePanelTitle').innerText = t.noticeTitle;
+      document.getElementById('noticeModalTitle').innerText = t.noticeTitle;
+      document.getElementById('menuBtnTextMobile').innerText = t.menuBtn;
+      document.getElementById('btnOpenMenu').innerText = t.openMenu;
+      document.getElementById('lblWeather').innerText = t.weather;
+      document.getElementById('lblTemp').innerText = t.temp;
+      document.getElementById('lblSeoulSpots').innerText = t.seoulSpots;
+      document.getElementById('lblCurrentLoc').innerText = t.currentLoc;
+      document.getElementById('lblTimeLeft').innerText = t.timeLeft;
+      document.getElementById('lblVisits').innerText = t.visits;
+      document.getElementById('lblRevisits').innerText = t.revisits;
+      document.getElementById('lblVisitsMobile').innerText = t.visits;
+      document.getElementById('lblRevisitsMobile').innerText = t.revisits;
+      document.getElementById('btnHolidayToggle').innerText = t.holidayBtn;
+      
+      document.getElementById('holidayModalHeader').innerText = t.holidayHeader;
+      document.getElementById('holidayGreetingTitle').innerText = t.holidayTitle;
+      document.getElementById('holidayGreetingDesc').innerHTML = t.holidayDesc;
+
+      document.getElementById('thIngredient').innerText = t.thIngredient;
+      document.getElementById('thOrigin').innerText = t.thOrigin;
+      document.getElementById('thNotes').innerText = t.thNotes;
+
+      document.getElementById('langSelectMobile').value = lang;
+      document.getElementById('langSelectDesktop').value = lang;
+    }
+
+    // 2. VISITOR TRACKER
+    function trackVisitors() {
+      let totalVisits = parseInt(localStorage.getItem('taco_total_visits') || '0', 10);
+      let revisits = parseInt(localStorage.getItem('taco_revisits') || '0', 10);
+
+      if (localStorage.getItem('taco_has_visited')) {
+        revisits += 1;
+      } else {
+        localStorage.setItem('taco_has_visited', 'true');
+      }
+      totalVisits += 1;
+
+      localStorage.setItem('taco_total_visits', totalVisits);
+      localStorage.setItem('taco_revisits', revisits);
+
+      document.getElementById('totalVisitsCount').innerText = totalVisits;
+      document.getElementById('revisitsCount').innerText = revisits;
+      document.getElementById('totalVisitsCountMobile').innerText = totalVisits;
+      document.getElementById('revisitsCountMobile').innerText = revisits;
+    }
+
+    // 3. MAP & TRUCK MARKER
+    const seoulSpots = [
+      { lat: 37.5566, lng: 126.9236, name: 'Hongdae St. Exit 9 (홍대입구역)', code: 'HONGDAE' },
+      { lat: 37.5796, lng: 126.9770, name: 'Gyeongbokgung Palace (경복궁)', code: 'PALACE' },
+      { lat: 37.5512, lng: 126.9882, name: 'N Seoul Tower (N서울타워)', code: 'NAMSAN' },
+      { lat: 37.4979, lng: 127.0276, name: 'Gangnam St. Exit 11 (강남역)', code: 'GANGNAM' },
+      { lat: 37.5262, lng: 126.9283, name: 'Yeouido Han River Park (여의도)', code: 'YEOUIDO' }
+    ];
+
+    const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([seoulSpots[0].lat, seoulSpots[0].lng], 15);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+
+    const customTruckIcon = L.divIcon({
+      className: 'custom-truck-wrapper',
+      html: `
+        <div class="truck-marker-container">
+          <div class="truck-speech" id="truckSpeech">Tasty Tacos! 🌮</div>
+          <div class="pixel-truck-emoji">🚚</div>
+        </div>
+      `,
+      iconSize: [120, 80],
+      iconAnchor: [60, 70]
+    });
+
+    const truckMarker = L.marker([seoulSpots[0].lat, seoulSpots[0].lng], { icon: customTruckIcon }).addTo(map);
+
+    const phrases = ["Tasty Tacos! 🌮", "Cooking Live! 🔥", "Fresh Daily! 🌱", "Hongdae Stop! 📍"];
+    let phraseIdx = 0;
+    setInterval(() => {
+      phraseIdx = (phraseIdx + 1) % phrases.length;
+      const elem = document.getElementById('truckSpeech');
+      if (elem) elem.innerText = phrases[phraseIdx];
+    }, 3500);
+
+    function moveToSpot(idx) {
+      const spot = seoulSpots[idx];
+      map.flyTo([spot.lat, spot.lng], 15, { duration: 1.2 });
+      truckMarker.setLatLng([spot.lat, spot.lng]);
+      
+      document.getElementById('locationName').innerText = spot.name;
+      document.getElementById('locationNameMobile').innerText = spot.name;
+      document.getElementById('seoulSpotBadge').innerText = spot.code;
+      document.getElementById('seoulSpotBadgeMobile').innerText = spot.code;
+    }
+
+    // 4. NOTICE SYSTEM WITH "TODAY HIDE" EXPIRATION
+    function checkNoticeExpiration() {
+      const hideTimestamp = localStorage.getItem('taco_notice_hide_timestamp');
+      if (hideTimestamp) {
+        const now = Date.now();
+        if (now - parseInt(hideTimestamp, 10) < 24 * 60 * 60 * 1000) {
+          document.getElementById('noticeContainer').classList.add('hidden');
+          return true;
+        } else {
+          localStorage.removeItem('taco_notice_hide_timestamp');
+          document.getElementById('noticeContainer').classList.remove('hidden');
+        }
+      }
+      return false;
+    }
+
+    function dismissNoticeForToday(checked) {
+      if (checked) {
+        localStorage.setItem('taco_notice_hide_timestamp', Date.now().toString());
+        document.getElementById('desktopNoticePanel').classList.add('hidden');
+        document.getElementById('noticeModal').classList.add('hidden');
+        document.getElementById('noticeContainer').classList.add('hidden');
+      }
+    }
+
+    function handleNoticeClick() {
+      if (window.innerWidth < 640) {
+        toggleMobileNotice(true);
+      } else {
+        const panel = document.getElementById('desktopNoticePanel');
+        panel.classList.toggle('hidden');
+      }
+    }
+
+    function toggleDesktopNotice(show) {
+      const panel = document.getElementById('desktopNoticePanel');
+      if (typeof show === 'boolean') {
+        panel.classList.toggle('hidden', !show);
+      } else {
+        panel.classList.toggle('hidden');
+      }
+    }
+
+    function toggleMobileNotice(show) {
+      document.getElementById('noticeModal').classList.toggle('hidden', !show);
+    }
+
+    function editNotice() {
+      const newText = prompt("새로운 공지사항 내용을 입력하세요:", document.getElementById('noticeContentText').innerText);
+      if (newText !== null && newText.trim() !== "") {
+        document.getElementById('noticeContentText').innerText = newText;
+        document.getElementById('noticeModalContent').innerText = newText;
+      }
+    }
+
+    // 5. HOLIDAY MODAL SYSTEM
+    function toggleHolidayModal(show) {
+      document.getElementById('holidayModal').classList.toggle('hidden', !show);
+    }
+
+    // 6. WEATHER ENGINE
+    let activePrecipitationType = null;
+    async function fetchSeoulLiveWeather() {
+      try {
+        const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.9780&current_weather=true');
+        const data = await res.json();
+        const weather = data.current_weather;
+        const tempStr = `${Math.round(weather.temperature)}°C`;
+        const code = weather.weathercode;
+
+        if (code >= 51 && code <= 67) {
+          applyWeatherVisuals('radial-gradient(circle, transparent 40%, rgba(15, 23, 42, 0.65) 100%)', 'RAIN 🌧️', tempStr, '🌧️', 'rain');
+        } else if (code >= 71 && code <= 77) {
+          applyWeatherVisuals('radial-gradient(circle, transparent 40%, rgba(226, 232, 240, 0.45) 100%)', 'SNOW ❄️', tempStr, '❄️', 'snow');
+        } else {
+          applyWeatherVisuals('radial-gradient(circle, transparent 60%, rgba(253, 224, 71, 0.2) 100%)', 'CLEAR ☀️', tempStr, '☀️', null);
+        }
+      } catch (e) {
+        applyWeatherVisuals('radial-gradient(circle, transparent 60%, rgba(253, 224, 71, 0.2) 100%)', 'CLEAR ☀️', '20°C', '☀️', null);
+      }
+    }
+
+    function applyWeatherVisuals(vignetteStyle, statusText, tempText, iconSymbol, precipType) {
+      document.getElementById('weatherVignette').style.background = vignetteStyle;
+      document.getElementById('weatherStatusText').innerText = statusText;
+      document.getElementById('weatherIconDisplay').innerText = iconSymbol;
+      document.getElementById('tempDisplay').innerText = tempText;
+      document.getElementById('weatherIconMobile').innerText = iconSymbol;
+      document.getElementById('tempDisplayMobile').innerText = `${tempText} · ${statusText}`;
+      activePrecipitationType = precipType;
+    }
+
+    // Weather Particle Canvas
+    const pCanvas = document.getElementById('precipCanvas');
+    const pCtx = pCanvas.getContext('2d');
+    let pWidth = pCanvas.width = window.innerWidth;
+    let pHeight = pCanvas.height = window.innerHeight;
+
+    window.addEventListener('resize', () => {
+      pWidth = pCanvas.width = window.innerWidth;
+      pHeight = pCanvas.height = window.innerHeight;
+    });
+
+    const particles = Array.from({ length: 80 }, () => ({
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight,
+      speed: Math.random() * 4 + 2,
+      length: Math.random() * 8 + 6,
+      size: Math.random() * 3 + 2
+    }));
+
+    function renderPrecipitation() {
+      pCtx.clearRect(0, 0, pWidth, pHeight);
+      if (activePrecipitationType) {
+        particles.forEach(p => {
+          p.y += p.speed;
+          if (p.y > pHeight) { p.y = -10; p.x = Math.random() * pWidth; }
+          if (activePrecipitationType === 'rain') {
+            pCtx.strokeStyle = '#7dd3fc';
+            pCtx.lineWidth = 1.5;
+            pCtx.beginPath();
+            pCtx.moveTo(p.x, p.y);
+            pCtx.lineTo(p.x - 2, p.y + p.length);
+            pCtx.stroke();
+          } else if (activePrecipitationType === 'snow') {
+            pCtx.fillStyle = '#ffffff';
+            pCtx.fillRect(p.x, p.y, p.size, p.size);
+          }
+        });
+      }
+      requestAnimationFrame(renderPrecipitation);
+    }
+
+    // 7. MENU MODAL SYSTEM
+    const menuItems = [
+      { name: 'Carne Asada Taco', krName: '카르네 아사다 타코', price: '₩4,500', desc: '직화로 구운 부채살, 고수, 다진 양파, 살사 베르데', stock: 6, icon: '🥩' },
+      { name: 'Birria Quesa Taco', krName: '비리아 퀘사 타코', price: '₩5,000', desc: '푹 삶은 우삼겹, 듬뿍 넣은 와하카 치즈, 비리아 콘소메 스튜', stock: 18, icon: '🧀' },
+      { name: 'Al Pastor Taco', krName: '알 파스토르 타코', price: '₩4,500', desc: '멕시칸 양념 돼지고기, 구운 파인애플, 살사 로하', stock: 24, icon: '🍍' },
+      { name: 'Baja Fish Taco', krName: '바하 피쉬 타코', price: '₩5,000', desc: '바삭한 맥주 튀김 옷을 입힌 대구살, 치폴레 크레마, 양배추 슬로', stock: 3, icon: '🐟' }
+    ];
+
+    const originData = [
+      { ingredient: '소고기 (Beef)', origin: '미국산 / 호주산', note: 'USDA 차이스 등급 부채살 및 양지' },
+      { ingredient: '돼지고기 (Pork)', origin: '국내산 (Jeju)', note: '제주산 무항생제 생목살' },
+      { ingredient: '닭고기 (Chicken)', origin: '국내산', note: '신선 냉장 정육 다리살' },
+      { ingredient: '대구 (Fish)', origin: '러시아산 / 원양산', note: '자연산 대구 순살 필렛' }
+    ];
+
+    function renderMenu() {
+      document.getElementById('menuGrid').innerHTML = menuItems.map(item => `
+        <div class="border-2 border-black bg-white p-3 flex flex-col justify-between shadow-[2px_2px_0_0_#000]">
+          <div>
+            <div class="flex items-start justify-between gap-2 mb-1.5">
+              <div>
+                <h3 class="text-black font-bold text-xs sm:text-sm leading-snug">${item.icon} ${item.name}</h3>
+                <p class="text-[11px] text-gray-600 font-bold leading-tight">${item.krName}</p>
+              </div>
+              <span class="font-arcade text-black font-bold text-[10px] bg-[#ffca3a] px-1.5 py-0.5 border border-black shrink-0">${item.price}</span>
+            </div>
+            <p class="text-xs text-gray-700 mb-2 leading-relaxed font-medium">${item.desc}</p>
+          </div>
+          <div class="flex items-center justify-between border-t border-black pt-2 text-xs">
+            <span class="text-gray-800 font-bold">남은 수량:</span>
+            <span class="font-bold ${item.stock <= 8 ? 'text-red-600 animate-pulse' : 'text-emerald-700'}">${item.stock}개 남음</span>
+          </div>
+        </div>
+      `).join('');
+
+      document.getElementById('originTableBody').innerHTML = originData.map(row => `
+        <tr class="hover:bg-amber-50">
+          <td class="p-2 font-bold text-black text-xs">${row.ingredient}</td>
+          <td class="p-2 text-emerald-800 font-bold text-xs">${row.origin}</td>
+          <td class="p-2 text-gray-700 text-xs">${row.note}</td>
+        </tr>
+      `).join('');
+    }
+
+    let currentPage = 1;
+    function toggleMenu(show) { document.getElementById('menuModal').classList.toggle('hidden', !show); }
+    function changePage(delta) {
+      currentPage = Math.max(1, Math.min(2, currentPage + delta));
+      document.getElementById('page1').classList.toggle('hidden', currentPage !== 1);
+      document.getElementById('page2').classList.toggle('hidden', currentPage !== 2);
+      document.getElementById('prevBtn').disabled = currentPage === 1;
+      document.getElementById('nextBtn').disabled = currentPage === 2;
+      document.getElementById('pageIndicator').innerText = `PG ${currentPage} / 2`;
+    }
+
+    // INITIALIZATION
+    checkNoticeExpiration();
+    trackVisitors();
+    fetchSeoulLiveWeather();
+    renderMenu();
+    renderPrecipitation();
+    changeLanguage('ko');
+
+    // Show holiday modal on initial load
+    setTimeout(() => {
+      toggleHolidayModal(true);
+    }, 1000);
+  </script>
+</body>
+</html>

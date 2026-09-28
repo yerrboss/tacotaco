@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>TacoTaco - Seoul Live GPS & Pixel Art Tracker</title>
+  
+  <!-- Leaflet CSS for Map Engine -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <!-- Retro Pixel Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    :root {
+      --app-height: 100dvh;
+    }
+
+    * {
+      font-family: 'Silkscreen', cursive, sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      box-sizing: border-box;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      height: var(--app-height);
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: #0f172a;
+      touch-action: manipulation;
+    }
+
+    .font-arcade {
+      font-family: 'Press Start 2P', cursive, monospace;
+    }
+
+    /* Core Pixelated Map Filter */
+    .pixelated-map .leaflet-tile-container img {
+      image-rendering: pixelated !important;
+      image-rendering: crisp-edges !important;
+      filter: contrast(125%) saturate(155%) hue-rotate(-5deg);
+    }
+
+    .pixelated-map .leaflet-container {
+      background: #1e293b;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Vibrant Chunky Retro Arcade Glass Box */
+    .pixel-box-vibrant {
+      background: rgba(255, 251, 232, 0.96);
+      border: clamp(2px, 0.8vw, 4px) solid #000;
+      box-shadow: 
+        inset 0 0 0 2px #fff,
+        0 0 0 2px #000,
+        3px 4px 0 0 rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(4px);
+    }
+
+    .pixel-btn {
+      border: 2px solid #000;
+      min-height: 38px;
+      touch-action: manipulation;
+      transition: transform 0.05s ease, box-shadow 0.05s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .pixel-btn:active {
+      transform: translate(2px, 2px) !important;
+      box-shadow: 1px 1px 0 0 #000 !important;
+    }
+
+    .pixel-btn-sun {
+      background: #ff5964;
+      color: #ffffff;
+      box-shadow: inset -2px -2px 0px 0px #b81d28, inset 2px 2px 0px 0px #ff9aa2, 3px 3px 0 0 #000;
+    }
+
+    .pixel-btn-sky {
+      background: #35a7ff;
+      color: #ffffff;
+      box-shadow: inset -2px -2px 0px 0px #0066b8, inset 2px 2px 0px 0px #85ccff, 3px 3px 0 0 #000;
+    }
+
+    .pixel-btn-amber {
+      background: #ffca3a;
+      color: #000000;
+      box-shadow: inset -2px -2px 0px 0px #c79200, inset 2px 2px 0px 0px #ffed9a, 3px 3px 0 0 #000;
+    }
+
+    /* CRT Scanlines Overlay */
+    .scanlines {
+      background: linear-gradient(
+        to bottom,
+        rgba(255,255,255,0),
+        rgba(255,255,255,0) 50%,
+        rgba(0,0,0,0.12) 50%,
+        rgba(0,0,0,0.12)
+      );
+      background-size: 100% 4px;
+      pointer-events: none;
+    }
+
+    /* Location Jump Pills */
+    .location-btn {
+      border: 2px solid #000;
+      box-shadow: 2px 2px 0 0 #000;
+      font-size: clamp(7px, 2.2vw, 9px);
+      padding: 4px 8px;
+      min-height: 32px;
+      white-space: nowrap;
+    }
+
+    /* Custom Retro Scrollbar */
+    .pixel-scroll::-webkit-scrollbar {
+      width: 8px;
+    }
+    .pixel-scroll::-webkit-scrollbar-track {
+      background: #ffeaa7;
+      border-left: 2px solid #000;
+    }
+    .pixel-scroll::-webkit-scrollbar-thumb {
+      background: #ff5964;
+      border: 2px solid #000;
+    }
+
+    .weather-vignette {
+      pointer-events: none;
+      transition: background 1.2s ease;
+    }
+
+    /* Classic Clean Food Truck Marker */
+    .truck-marker-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      filter: drop-shadow(0px 4px 6px rgba(0,0,0,0.7));
+    }
+    .truck-badge {
+      font-family: 'Press Start 2P', cursive;
+      font-size: clamp(6px, 1.8vw, 8px);
+      background: #ff4d6d;
+      color: #ffffff;
+      padding: 2px 6px;
+      border: 2px solid #000;
+      box-shadow: 2px 2px 0 0 #000;
+      white-space: nowrap;
+      margin-bottom: 2px;
+      animation: bouncyBadge 1.2s infinite alternate ease-in-out;
+    }
+    @keyframes bouncyBadge {
+      0% { transform: translateY(0); }
+      100% { transform: translateY(-4px); }
+    }
+
+    /* Collapsible HUD Animations for Narrow Mobile Screens */
+    .hud-collapse-content {
+      transition: max-height 0.3s cubic-bezier(0, 1, 0, 1), opacity 0.25s ease;
+      overflow: hidden;
+    }
+    .hud-collapse-content.collapsed {
+      max-height: 0 !important;
+      opacity: 0;
+      pointer-events: none;
+      padding-top: 0 !important;
+      padding-bottom: 0 !important;
+      margin-top: 0 !important;
+      margin-bottom: 0 !important;
+    }
+  </style>
+</head>
+<body class="bg-[#0f172a] text-black overflow-hidden w-screen h-screen relative select-none">
+
+  <!-- Map Engine Container -->
+  <div id="map" class="absolute inset-0 w-full h-full pixelated-map z-0"></div>
+
+  <!-- CRT Retro Scanlines & Weather Particle Layer -->
+  <div class="scanlines fixed inset-0 z-10 pointer-events-none"></div>
+  <div id="weatherVignette" class="weather-vignette fixed inset-0 z-20 pointer-events-none"></div>
+  <canvas id="precipCanvas" class="fixed inset-0 z-20 pointer-events-none"></canvas>
+
+  <!-- TOP-LEFT / MOBILE TOP HUD: REAL SEOUL GPS & LIVE WEATHER -->
+  <div class="fixed top-2 left-2 right-2 sm:right-auto sm:top-4 sm:left-4 z-30 pointer-events-auto flex flex-col gap-2 max-w-full sm:max-w-[290px] md:max-w-xs">
+    
+    <div class="pixel-box-vibrant p-2 sm:p-2.5 flex flex-col gap-1.5">
+      <!-- HUD Header + Collapse Toggle Button for Mobile/Fold -->
+      <div class="flex items-center justify-between border-b-2 border-black pb-1">
+        <span class="font-arcade text-[8px] sm:text-[9px] text-black flex items-center gap-1.5">
+          <i data-lucide="map-pin" class="w-3.5 h-3.5 text-red-600"></i> SEOUL GPS
+        </span>
+        <div class="flex items-center gap-1">
+          <span id="seoulSpotBadge" class="bg-amber-400 text-black px-1.5 py-0.5 text-[7px] sm:text-[8px] font-arcade border border-black">
+            HONGDAE
+          </span>
+          <!-- Mobile Expand/Collapse Toggle -->
+          <button onclick="toggleHud('gpsHudContent')" class="sm:hidden p-1 text-black font-bold font-arcade text-[10px] bg-white border border-black rounded-none">
+            <i id="gpsHudIcon" data-lucide="chevron-up" class="w-3 h-3"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Collapsible Body on Narrow Screens -->
+      <div id="gpsHudContent" class="hud-collapse-content max-h-[300px] opacity-100 flex flex-col gap-1.5 pt-0.5">
+        <div class="flex items-center justify-between text-[10px] text-gray-800">
+          <span class="font-bold flex items-center gap-1">
+            <span id="weatherIconDisplay">📡</span> WEATHER:
+          </span>
+          <span id="weatherStatusText" class="font-arcade text-emerald-700 text-[8px] sm:text-[9px]">SYNCING...</span>
+        </div>
+
+        <div class="text-[9px] text-gray-600 flex justify-between items-center border-t border-gray-300 pt-1">
+          <span>Temp: <strong id="tempDisplay" class="text-black">--°C</strong></span>
+          <span class="text-[7px] sm:text-[8px] font-arcade text-emerald-700 bg-emerald-100 px-1 border border-emerald-500">LIVE SYNCED</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Location Jump Pills (Horizontal scrollable on narrow fold displays) -->
+    <div class="pixel-box-vibrant p-1.5 flex flex-col gap-1">
+      <div class="flex items-center justify-between">
+        <span class="font-arcade text-[7px] sm:text-[8px] text-gray-800">📍 JUMP TO SEOUL SPOT:</span>
+        <button onclick="toggleHud('spotsHudContent')" class="sm:hidden p-0.5 text-black font-bold font-arcade text-[9px]">
+          <i id="spotsHudIcon" data-lucide="chevron-up" class="w-3 h-3"></i>
+        </button>
+      </div>
+
+      <div id="spotsHudContent" class="hud-collapse-content max-h-[120px] opacity-100">
+        <div class="flex sm:flex-wrap gap-1 overflow-x-auto pixel-scroll pb-0.5 pt-0.5">
+          <button onclick="moveToSpot(0)" class="location-btn bg-orange-100 text-black font-arcade">홍대 Hongdae</button>
+          <button onclick="moveToSpot(1)" class="location-btn bg-red-100 text-black font-arcade">경복궁 Palace</button>
+          <button onclick="moveToSpot(2)" class="location-btn bg-green-100 text-black font-arcade">남산 Namsan</button>
+          <button onclick="moveToSpot(3)" class="location-btn bg-blue-100 text-black font-arcade">강남 Gangnam</button>
+          <button onclick="moveToSpot(4)" class="location-btn bg-purple-100 text-black font-arcade">여의도 Yeouido</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOP-RIGHT HUD: TRUCK STATUS & FLOATING MENU TRIGGER -->
+  <div class="fixed bottom-3 left-2 right-2 sm:bottom-auto sm:left-auto sm:top-4 sm:right-4 z-30 flex flex-col items-end gap-2 max-w-full sm:max-w-xs sm:w-auto pointer-events-auto">
+    
+    <!-- Live Status HUD Card -->
+    <div class="pixel-box-vibrant p-2 sm:p-3 w-full text-xs text-black flex flex-col gap-1.5 sm:gap-2">
+      <div class="flex items-center justify-between border-b-2 border-black pb-1 sm:pb-1.5">
+        <span class="flex items-center gap-1.5 font-arcade text-[8px] sm:text-[9px] text-emerald-800">
+          <span class="inline-block w-2 h-2 bg-emerald-500 rounded-none animate-ping"></span>
+          LIVE TRACKER
+        </span>
+        <span class="bg-[#ff4d6d] text-white px-1.5 py-0.5 text-[7px] sm:text-[8px] font-arcade border border-black shadow-[1px_1px_0_0_#000]">
+          COOKING & SERVING 🌮
+        </span>
+      </div>
+      
+      <div class="flex items-center justify-between text-black text-[10px] sm:text-[11px] pt-0.5">
+        <span class="flex items-center gap-1 font-bold text-gray-700 text-[9px] sm:text-[10px]">
+          <i data-lucide="navigation" class="w-3 h-3 text-red-600"></i> STOP:
+        </span>
+        <span id="locationName" class="text-black font-bold truncate max-w-[170px] sm:max-w-none">Hongdae St. Exit 9</span>
+      </div>
+
+      <!-- Time & Stock Inline for Fold / Compact devices -->
+      <div class="grid grid-cols-2 gap-1.5 pt-0.5">
+        <div class="flex items-center justify-between bg-[#ffeaa7] p-1.5 border-2 border-black shadow-[1px_1px_0_0_#000]">
+          <span class="text-[7px] sm:text-[8px] text-black flex items-center gap-1 font-arcade">
+            <i data-lucide="clock" class="w-2.5 h-2.5 text-red-600"></i> LEAVING:
+          </span>
+          <span id="countdownTimer" class="font-arcade text-red-600 text-[8px] sm:text-[10px] font-bold">01:42:19</span>
+        </div>
+
+        <div class="bg-red-100 border-2 border-red-500 p-1.5 flex items-center justify-between text-red-900 shadow-[1px_1px_0_0_#000]">
+          <span class="font-bold text-red-700 text-[7px] sm:text-[8px]">🚨 STOCK:</span>
+          <span class="font-arcade text-red-600 text-[8px] sm:text-[9px] truncate font-bold">6 LEFT</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN FLOATING OPEN MENU BUTTON -->
+    <button onclick="toggleMenu(true)" 
+      class="pixel-btn pixel-btn-sun w-full py-2.5 sm:py-3 px-4 font-arcade text-xs sm:text-sm border-2 border-black cursor-pointer group flex items-center justify-center gap-2">
+      <span class="text-base sm:text-lg group-hover:scale-125 transition-transform">🌮</span>
+      <span class="tracking-wider text-white">OPEN MENU & ORIGIN</span>
+    </button>
+  </div>
+
+  <!-- MULTI-PAGE ARCADE MENU MODAL -->
+  <div id="menuModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-2 sm:p-4 hidden pointer-events-auto">
+    <div class="pixel-box-vibrant w-full max-w-2xl max-h-[92dvh] sm:max-h-[85vh] flex flex-col text-black relative my-auto">
+      
+      <!-- Modal Header -->
+      <div class="bg-[#ffca3a] border-b-2 sm:border-b-4 border-black p-2.5 sm:p-3.5 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="text-xl sm:text-2xl">🌮</span>
+          <h2 id="modalTitle" class="font-arcade text-black text-[9px] sm:text-xs tracking-wider">TACOTACO MENU [PAGE 1/2]</h2>
+        </div>
+        <button onclick="toggleMenu(false)" class="pixel-btn pixel-btn-sun px-2.5 py-1 text-xs font-arcade text-white">
+          ✕
+        </button>
+      </div>
+
+      <!-- PAGE 1: MENU & LIVE STOCK -->
+      <div id="page1" class="p-2.5 sm:p-4 overflow-y-auto pixel-scroll flex-1 space-y-2.5 sm:space-y-3 bg-[#fffbe8]">
+        <div class="bg-amber-100 border-2 border-amber-500 p-2 text-[10px] sm:text-[11px] text-amber-900 flex justify-between items-center shadow-[2px_2px_0_0_#000]">
+          <span class="font-bold">🔥 Freshly prepared today in Seoul! Live quantities.</span>
+          <span class="font-arcade text-[7px] sm:text-[8px] text-red-600 bg-amber-200 px-1 border border-amber-600">FRESH</span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3" id="menuGrid">
+          <!-- Dynamically Populated Cards -->
+        </div>
+      </div>
+
+      <!-- PAGE 2: INGREDIENTS & SOURCING (원산지) -->
+      <div id="page2" class="p-2.5 sm:p-4 overflow-y-auto pixel-scroll flex-1 space-y-3 bg-[#fffbe8] hidden">
+        <div class="bg-emerald-100 border-2 border-emerald-600 p-2 text-[10px] sm:text-[11px] text-emerald-900 shadow-[2px_2px_0_0_#000]">
+          <p class="font-bold text-emerald-900 font-arcade text-[8px] sm:text-[9px] mb-0.5">🌱 SOURCING & ORIGIN (원산지 안내)</p>
+          <p class="text-[9px] sm:text-[10px] text-gray-800">Fresh daily veggies from Garak Market paired with premium inspected meats.</p>
+        </div>
+
+        <!-- Korean Official Origin Table -->
+        <div class="border-2 border-black bg-white p-1 shadow-[2px_2px_0_0_#000] overflow-x-auto">
+          <table class="w-full text-left text-[10px] sm:text-[11px] border-collapse min-w-[280px]">
+            <thead>
+              <tr class="bg-[#ffca3a] text-black border-b-2 border-black text-[8px] sm:text-[9px] font-arcade">
+                <th class="p-2">Ingredient (재료)</th>
+                <th class="p-2">Origin (원산지)</th>
+                <th class="p-2">Notes</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 text-gray-900" id="originTableBody">
+              <!-- Dynamically Populated -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="border-2 border-black p-2.5 bg-orange-50 text-[9px] sm:text-[10px] text-gray-800 space-y-1 shadow-[2px_2px_0_0_#000]">
+          <p class="text-red-600 font-bold font-arcade text-[8px]">⚠️ ALLERGEN NOTICE (알레르기 안내):</p>
+          <p>Contains corn, gluten, cilantro, onions, dairy, and lime juice. Inform chef of allergies!</p>
+        </div>
+      </div>
+
+      <!-- Modal Footer Pagination -->
+      <div class="bg-[#ffca3a] border-t-2 sm:border-t-4 border-black p-2.5 sm:p-3 flex items-center justify-between">
+        <button id="prevBtn" onclick="changePage(-1)" disabled class="pixel-btn pixel-btn-sky opacity-50 px-3 py-1.5 text-[8px] sm:text-[9px] font-arcade cursor-not-allowed">
+          ◀ PREV
+        </button>
+
+        <div class="text-[9px] sm:text-[10px] font-arcade text-black font-bold" id="pageIndicator">
+          PG 1 / 2
+        </div>
+
+        <button id="nextBtn" onclick="changePage(1)" class="pixel-btn pixel-btn-sky px-3 py-1.5 text-[8px] sm:text-[9px] font-arcade">
+          NEXT ➔
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script>
+    // Initialize Lucide Icons
+    lucide.createIcons();
+
+    // Fix Dynamic Viewport Height for Mobile Browser address bars & Fold screens
+    function syncAppHeight() {
+      document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`);
+    }
+    window.addEventListener('resize', syncAppHeight);
+    window.addEventListener('orientationchange', syncAppHeight);
+    syncAppHeight();
+
+    // Seoul GPS Spots Coordinates & Data
+    const seoulSpots = [
+      { lat: 37.5566, lng: 126.9236, name: 'Hongdae St. Exit 9 (홍대입구역)', code: 'HONGDAE' },
+      { lat: 37.5796, lng: 126.9770, name: 'Gyeongbokgung Palace (경복궁)', code: 'PALACE' },
+      { lat: 37.5512, lng: 126.9882, name: 'N Seoul Tower (N서울타워)', code: 'NAMSAN' },
+      { lat: 37.4979, lng: 127.0276, name: 'Gangnam St. Exit 11 (강남역)', code: 'GANGNAM' },
+      { lat: 37.5262, lng: 126.9283, name: 'Yeouido Han River Park (여의도)', code: 'YEOUIDO' }
+    ];
+
+    // Initialize Map Engine
+    const map = L.map('map', { 
+      zoomControl: false, 
+      attributionControl: false,
+      tap: true
+    }).setView([seoulSpots[0].lat, seoulSpots[0].lng], 15);
+
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      crossOrigin: true
+    }).addTo(map);
+
+    // CLEAN ORIGINAL TACO TRUCK MARKER (Restored beloved aesthetic)
+    const classicTruckIcon = L.divIcon({
+      className: 'custom-classic-truck-marker',
+      html: `
+        <div class="truck-marker-container">
+          <div class="truck-badge">TACO TRUCK 🌮</div>
+          <div style="font-size: 34px; line-height: 1; filter: drop-shadow(0px 3px 0px #000);">🚚</div>
+        </div>
+      `,
+      iconSize: [80, 50],
+      iconAnchor: [40, 42]
+    });
+
+    const truckMarker = L.marker([seoulSpots[0].lat, seoulSpots[0].lng], { icon: classicTruckIcon }).addTo(map);
+
+    function moveToSpot(idx) {
+      const spot = seoulSpots[idx];
+      map.flyTo([spot.lat, spot.lng], 15, { duration: 1.2 });
+      truckMarker.setLatLng([spot.lat, spot.lng]);
+      document.getElementById('locationName').innerText = spot.name;
+      document.getElementById('seoulSpotBadge').innerText = spot.code;
+    }
+
+    function toggleHud(contentId) {
+      const content = document.getElementById(contentId);
+      if (!content) return;
+      const isCollapsed = content.classList.contains('collapsed');
+      
+      if (isCollapsed) {
+        content.classList.remove('collapsed');
+      } else {
+        content.classList.add('collapsed');
+      }
+
+      const iconId = contentId === 'gpsHudContent' ? 'gpsHudIcon' : 'spotsHudIcon';
+      const iconElem = document.getElementById(iconId);
+      if (iconElem) {
+        iconElem.setAttribute('data-lucide', isCollapsed ? 'chevron-up' : 'chevron-down');
+        lucide.createIcons();
+      }
+    }
+
+    let activePrecipitationType = null;
+
+    async function fetchSeoulLiveWeather() {
+      try {
+        const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.9780&current_weather=true');
+        const data = await res.json();
+        const weather = data.current_weather;
+        const tempStr = `${Math.round(weather.temperature)}°C`;
+        const code = weather.weathercode;
+        const isDay = weather.is_day === 1;
+
+        if (code >= 51 && code <= 67) {
+          applyWeatherVisuals('radial-gradient(circle, transparent 40%, rgba(15, 23, 42, 0.6) 100%)', 'SEOUL RAIN 🌧️', tempStr, '🌧️', 'rain');
+        } else if (code >= 71 && code <= 77) {
+          applyWeatherVisuals('radial-gradient(circle, transparent 40%, rgba(226, 232, 240, 0.35) 100%)', 'SEOUL SNOW ❄️', tempStr, '❄️', 'snow');
+        } else if (!isDay) {
+          applyWeatherVisuals('radial-gradient(circle, transparent 30%, rgba(15, 23, 42, 0.75) 100%)', 'SEOUL NIGHT 🌙', tempStr, '🌙', null);
+        } else {
+          applyWeatherVisuals('radial-gradient(circle, transparent 60%, rgba(253, 224, 71, 0.18) 100%)', 'SEOUL SUN ☀️', tempStr, '☀️', null);
+        }
+      } catch (e) {
+        applyWeatherVisuals('radial-gradient(circle, transparent 60%, rgba(253, 224, 71, 0.18) 100%)', 'SEOUL LIVE ☀️', '22°C', '☀️', null);
+      }
+    }
+
+    function applyWeatherVisuals(vignetteStyle, statusText, tempText, iconSymbol, precipType) {
+      document.getElementById('weatherVignette').style.background = vignetteStyle;
+      document.getElementById('weatherStatusText').innerText = statusText;
+      document.getElementById('weatherIconDisplay').innerText = iconSymbol;
+      document.getElementById('tempDisplay').innerText = tempText;
+      activePrecipitationType = precipType;
+    }
+
+    setInterval(fetchSeoulLiveWeather, 300000);
+
+    // Weather Canvas Particle Loop
+    const pCanvas = document.getElementById('precipCanvas');
+    const pCtx = pCanvas.getContext('2d');
+    let pWidth = pCanvas.width = window.innerWidth;
+    let pHeight = pCanvas.height = window.innerHeight;
+
+    window.addEventListener('resize', () => {
+      pWidth = pCanvas.width = window.innerWidth;
+      pHeight = pCanvas.height = window.innerHeight;
+    });
+
+    const particles = Array.from({ length: 80 }, () => ({
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight,
+      speed: Math.random() * 4 + 2,
+      length: Math.random() * 8 + 6,
+      size: Math.random() * 3 + 2
+    }));
+
+    function renderPrecipitation() {
+      pCtx.clearRect(0, 0, pWidth, pHeight);
+      if (activePrecipitationType) {
+        particles.forEach(p => {
+          p.y += p.speed;
+          if (p.y > pHeight) { p.y = -10; p.x = Math.random() * pWidth; }
+          if (activePrecipitationType === 'rain') {
+            pCtx.strokeStyle = '#7dd3fc';
+            pCtx.lineWidth = 1.5;
+            pCtx.beginPath();
+            pCtx.moveTo(p.x, p.y);
+            pCtx.lineTo(p.x - 2, p.y + p.length);
+            pCtx.stroke();
+          } else if (activePrecipitationType === 'snow') {
+            pCtx.fillStyle = '#ffffff';
+            pCtx.fillRect(p.x, p.y, p.size, p.size);
+          }
+        });
+      }
+      requestAnimationFrame(renderPrecipitation);
+    }
+
+    const menuItems = [
+      { name: 'Carne Asada Taco', krName: '카르네 아사다 타코', price: '₩4,500', desc: 'Charred flank steak, cilantro, white onion, salsa verde on corn tortilla.', stock: 6, icon: '🥩' },
+      { name: 'Birria Quesa Taco', krName: '비리아 퀘사 타코', price: '₩5,000', desc: 'Slow-braised beef, melted Oaxaca cheese, rich consommé dip.', stock: 18, icon: '🧀' },
+      { name: 'Al Pastor Taco', krName: '알 파스토르 타코', price: '₩4,500', desc: 'Achiote-marinated roasted pork, grilled pineapple, salsa roja.', stock: 24, icon: '🍍' },
+      { name: 'Baja Fish Taco', krName: '바하 피쉬 타코', price: '₩5,000', desc: 'Crispy beer-battered fish, chipotle crema, cabbage slaw.', stock: 3, icon: '🐟' }
+    ];
+
+    const originData = [
+      { ingredient: 'Beef (소고기)', origin: 'USA / Australia', note: 'USDA Choice Flank & Chuck' },
+      { ingredient: 'Pork (돼지고기)', origin: 'Domestic Korea (국내산)', note: 'Jeju Fresh Pork Shoulder' },
+      { ingredient: 'Chicken (닭고기)', origin: 'Domestic Korea (국내산)', note: 'Antibiotic-free Thigh' },
+      { ingredient: 'Fish (대구)', origin: 'Russia / Pacific', note: 'Wild-Caught Cod Fillet' },
+      { ingredient: 'Veggies (채소)', origin: 'Domestic Korea (국내산)', note: 'Daily Fresh Garak Market' }
+    ];
+
+    function renderMenu() {
+      document.getElementById('menuGrid').innerHTML = menuItems.map(item => `
+        <div class="border-2 border-black bg-white p-2.5 flex flex-col justify-between shadow-[2px_2px_0_0_#000]">
+          <div>
+            <div class="flex items-start justify-between gap-2 mb-1">
+              <div>
+                <h3 class="text-black font-bold text-[11px] sm:text-xs">${item.icon} ${item.name}</h3>
+                <p class="text-[8px] sm:text-[9px] text-gray-600 font-bold">${item.krName}</p>
+              </div>
+              <span class="font-arcade text-black font-bold text-[9px] bg-[#ffca3a] px-1.5 py-0.5 border border-black">${item.price}</span>
+            </div>
+            <p class="text-[9px] sm:text-[10px] text-gray-700 mb-2 leading-relaxed">${item.desc}</p>
+          </div>
+          <div class="flex items-center justify-between border-t border-black pt-1.5 text-[9px]">
+            <span class="text-gray-800 font-bold">STOCK:</span>
+            <span class="font-arcade font-bold ${item.stock <= 8 ? 'text-red-600 animate-pulse' : 'text-emerald-700'}">${item.stock} LEFT</span>
+          </div>
+        </div>
+      `).join('');
+
+      document.getElementById('originTableBody').innerHTML = originData.map(row => `
+        <tr class="hover:bg-amber-50">
+          <td class="p-1.5 font-bold text-black">${row.ingredient}</td>
+          <td class="p-1.5 text-emerald-800 font-bold">${row.origin}</td>
+          <td class="p-1.5 text-gray-700 text-[9px] sm:text-[10px]">${row.note}</td>
+        </tr>
+      `).join('');
+    }
+
+    // Modal Navigation Logic
+    let currentPage = 1;
+    function toggleMenu(show) { document.getElementById('menuModal').classList.toggle('hidden', !show); }
+    
+    function changePage(delta) {
+      currentPage = Math.max(1, Math.min(2, currentPage + delta));
+      document.getElementById('page1').classList.toggle('hidden', currentPage !== 1);
+      document.getElementById('page2').classList.toggle('hidden', currentPage !== 2);
+      
+      const prevBtn = document.getElementById('prevBtn');
+      const nextBtn = document.getElementById('nextBtn');
+      
+      prevBtn.disabled = currentPage === 1;
+      prevBtn.classList.toggle('opacity-50', currentPage === 1);
+      prevBtn.classList.toggle('cursor-not-allowed', currentPage === 1);
+
+      nextBtn.disabled = currentPage === 2;
+      nextBtn.classList.toggle('opacity-50', currentPage === 2);
+      nextBtn.classList.toggle('cursor-not-allowed', currentPage === 2);
+
+      document.getElementById('pageIndicator').innerText = `PG ${currentPage} / 2`;
+      document.getElementById('modalTitle').innerText = currentPage === 1 ? "TACOTACO MENU [PAGE 1/2]" : "INGREDIENTS & ORIGIN [PAGE 2/2]";
+    }
+
+    // Countdown Timer
+    let totalSeconds = 6139;
+    setInterval(() => {
+      if (totalSeconds > 0) totalSeconds--;
+      const hrs = Math.floor(totalSeconds / 3600).toString().padStart(2, '0');
+      const mins = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0');
+      const secs = (totalSeconds % 60).toString().padStart(2, '0');
+      document.getElementById('countdownTimer').innerText = `${hrs}:${mins}:${secs}`;
+    }, 1000);
+
+    // Initializations
+    fetchSeoulLiveWeather();
+    renderMenu();
+    renderPrecipitation();
+  </script>
+</body>
+</html>

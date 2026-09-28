@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TacoTaco - Dynamic Daytime Arcade Map</title>
+  
+  <!-- Retro Pixel Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    * {
+      font-family: 'Silkscreen', cursive;
+      user-select: none;
+      -webkit-font-smoothing: none;
+    }
+
+    .font-arcade {
+      font-family: 'Press Start 2P', cursive;
+    }
+
+    canvas {
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+
+    /* Vibrant Retro Pixel Box UI */
+    .pixel-box-vibrant {
+      background: #fffbe8;
+      border: 4px solid #000;
+      box-shadow: 
+        inset 0 0 0 2px #fff,
+        0 0 0 2px #000,
+        4px 6px 0 0 rgba(0, 0, 0, 0.85);
+    }
+
+    /* Retro Arcade Buttons */
+    .pixel-btn-sun {
+      background: #ff5964;
+      color: #ffffff;
+      border: 3px solid #000;
+      box-shadow: 
+        inset -3px -3px 0px 0px #b81d28,
+        inset 3px 3px 0px 0px #ff9aa2,
+        3px 4px 0 0 #000;
+      transition: all 0.05s ease;
+    }
+    .pixel-btn-sun:active {
+      transform: translate(2px, 2px);
+      box-shadow: 
+        inset 3px 3px 0px 0px #b81d28,
+        1px 1px 0 0 #000;
+    }
+
+    .pixel-btn-sky {
+      background: #35a7ff;
+      color: #ffffff;
+      border: 3px solid #000;
+      box-shadow: 
+        inset -3px -3px 0px 0px #0066b8,
+        inset 3px 3px 0px 0px #85ccff,
+        3px 4px 0 0 #000;
+    }
+    .pixel-btn-sky:active {
+      transform: translate(2px, 2px);
+      box-shadow: 
+        inset 3px 3px 0px 0px #0066b8,
+        1px 1px 0 0 #000;
+    }
+
+    .pixel-btn-mode {
+      border: 2px solid #000;
+      box-shadow: 2px 2px 0 0 #000;
+    }
+    .pixel-btn-mode.active {
+      background: #ffca3a !important;
+      color: #000 !important;
+      border-color: #000 !important;
+      font-weight: bold;
+    }
+
+    /* Subtle CRT Sunlight Vignette */
+    .daylight-vignette {
+      background: radial-gradient(circle, rgba(255,255,255,0) 65%, rgba(255, 230, 150, 0.25) 100%);
+      pointer-events: none;
+    }
+
+    /* Custom Retro Scrollbar */
+    .pixel-scroll::-webkit-scrollbar {
+      width: 12px;
+    }
+    .pixel-scroll::-webkit-scrollbar-track {
+      background: #ffeaa7;
+      border-left: 2px solid #000;
+    }
+    .pixel-scroll::-webkit-scrollbar-thumb {
+      background: #ff5964;
+      border: 2px solid #000;
+    }
+  </style>
+</head>
+<body class="bg-[#ffca3a] text-black overflow-hidden w-screen h-screen relative select-none">
+
+  <!-- Sunlight & Warmth Vignette Overlay -->
+  <div class="daylight-vignette fixed inset-0 z-30"></div>
+
+  <!-- Fullscreen Pixel Map Canvas -->
+  <canvas id="mapCanvas" class="absolute inset-0 w-full h-full block cursor-grab active:cursor-grabbing z-0"></canvas>
+
+  <!-- TOP-LEFT LIGHT & TIME-OF-DAY CONTROL BAR -->
+  <div class="fixed top-4 left-4 z-20 pointer-events-auto flex items-center gap-1.5 pixel-box-vibrant p-2">
+    <span class="font-arcade text-[9px] text-black mr-1 hidden sm:inline">☀️ LIGHTING:</span>
+    <button onclick="setTimeOfDay('dawn')" id="btn-dawn" class="pixel-btn-mode bg-orange-100 text-orange-800 text-[9px] px-2 py-1 font-arcade">
+      🌅 DAWN
+    </button>
+    <button onclick="setTimeOfDay('day')" id="btn-day" class="pixel-btn-mode bg-yellow-100 text-yellow-900 text-[9px] px-2 py-1 font-arcade active">
+      ☀️ DAYLIGHT
+    </button>
+    <button onclick="setTimeOfDay('sunset')" id="btn-sunset" class="pixel-btn-mode bg-rose-100 text-rose-900 text-[9px] px-2 py-1 font-arcade">
+      🌇 SUNSET
+    </button>
+  </div>
+
+  <!-- TOP-RIGHT RETRO ARCADE HUD -->
+  <div class="fixed top-4 right-4 z-20 flex flex-col items-end gap-3 max-w-xs sm:max-w-sm pointer-events-auto">
+    
+    <!-- Status & Coordinates Vibrant Box -->
+    <div class="pixel-box-vibrant p-3 w-full text-xs text-black flex flex-col gap-2">
+      <div class="flex items-center justify-between border-b-2 border-black pb-2">
+        <span class="flex items-center gap-2 font-arcade text-[9px] text-emerald-700">
+          <span class="inline-block w-2.5 h-2.5 bg-emerald-500 rounded-none animate-ping"></span>
+          LIVE TRACKER
+        </span>
+        <span id="truckStatus" class="bg-[#ff5964] text-white px-2 py-0.5 text-[8px] font-arcade tracking-widest border border-black shadow-[2px_2px_0_0_#000]">
+          PARKED & COOKING 🌮
+        </span>
+      </div>
+      
+      <div class="flex items-center justify-between text-black text-[11px] pt-0.5">
+        <span class="flex items-center gap-1.5 font-bold text-gray-700">
+          <i data-lucide="map-pin" class="w-3.5 h-3.5 text-red-600"></i>
+          STOP:
+        </span>
+        <span id="locationName" class="text-black font-bold truncate">Hongdae St. Exit 9</span>
+      </div>
+
+      <!-- Live Countdown Timer -->
+      <div class="flex items-center justify-between bg-[#ffeaa7] p-2 border-2 border-black shadow-[2px_2px_0_0_#000]">
+        <span class="text-[9px] text-black flex items-center gap-1 font-arcade">
+          <i data-lucide="clock" class="w-3 h-3 text-red-600"></i> LEAVING IN:
+        </span>
+        <span id="countdownTimer" class="font-arcade text-red-600 text-[11px] tracking-widest font-bold">01:42:19</span>
+      </div>
+
+      <!-- Live Low Stock Ticker -->
+      <div class="bg-red-100 border-2 border-red-500 p-2 flex items-center justify-between text-[10px] text-red-900 shadow-[2px_2px_0_0_#000]">
+        <span class="flex items-center gap-1 font-bold text-red-700 text-[9px]">
+          🚨 LOW STOCK:
+        </span>
+        <span id="criticalItemTicker" class="font-arcade text-red-600 text-[9px] truncate font-bold">Carne Asada (6 LEFT)</span>
+      </div>
+    </div>
+
+    <!-- FLOATING ARCADE MENU BUTTON -->
+    <button id="openMenuBtn" onclick="toggleMenu(true)" 
+      class="pixel-btn-sun px-4 py-3 rounded-none flex items-center gap-3 font-arcade text-xs border-2 border-black cursor-pointer group mt-1">
+      <span class="text-xl group-hover:scale-125 transition-transform">🌮</span>
+      <span class="tracking-wider text-white">OPEN MENU</span>
+    </button>
+  </div>
+
+  <!-- BOTTOM-LEFT RETRO NAVIGATION ADVICE -->
+  <div class="fixed bottom-4 left-4 z-20 pointer-events-auto hidden sm:block">
+    <div class="pixel-box-vibrant p-2.5 text-[10px] text-black flex flex-col gap-1">
+      <div class="text-red-600 font-arcade text-[8px] mb-0.5">🕹️ EXPLORE MAP</div>
+      <div>• Click & Drag canvas to look around</div>
+      <div>• Live truck navigating daylight route</div>
+      <div class="text-emerald-700 text-[9px] mt-1 flex items-center gap-1.5 font-arcade font-bold">
+        <span class="w-2.5 h-2.5 bg-emerald-500 inline-block border border-black"></span> SUNNY WEATHER
+      </div>
+    </div>
+  </div>
+
+  <!-- INTERACTIVE MULTI-PAGE MENU OVERLAY MODAL -->
+  <div id="menuModal" class="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 hidden">
+    <div class="pixel-box-vibrant w-full max-w-2xl max-h-[88vh] flex flex-col text-black relative">
+      
+      <!-- Modal Header -->
+      <div class="bg-[#ffca3a] border-b-4 border-black p-4 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <span class="text-2xl">🌮</span>
+          <h2 id="modalTitle" class="font-arcade text-black text-xs sm:text-sm tracking-wider">TACOTACO MENU [PAGE 1/2]</h2>
+        </div>
+        <button onclick="toggleMenu(false)" class="pixel-btn-sun px-2.5 py-1 text-xs font-arcade text-white">
+          X
+        </button>
+      </div>
+
+      <!-- PAGE 1: MENU & LIVE STOCK -->
+      <div id="page1" class="p-4 overflow-y-auto pixel-scroll flex-1 space-y-3 bg-[#fffbe8]">
+        <div class="bg-yellow-100 border-2 border-yellow-600 p-2.5 text-[11px] text-yellow-900 flex justify-between items-center shadow-[2px_2px_0_0_#000]">
+          <span class="font-bold">🔥 Freshly prepared today! Stock levels updated live.</span>
+          <span class="font-arcade text-[8px] text-red-600">FRESH FOOD</span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="menuGrid">
+          <!-- Dynamically Generated Menu Cards -->
+        </div>
+      </div>
+
+      <!-- PAGE 2: INGREDIENTS & SOURCING (원산지) -->
+      <div id="page2" class="p-4 overflow-y-auto pixel-scroll flex-1 space-y-4 bg-[#fffbe8] hidden">
+        <div class="bg-emerald-100 border-2 border-emerald-600 p-2.5 text-[11px] text-emerald-900 shadow-[2px_2px_0_0_#000]">
+          <p class="font-bold mb-0.5 text-emerald-800 font-arcade text-[10px]">🌱 SOURCING & ORIGIN (원산지 안내)</p>
+          <p class="text-[10px] text-gray-800">Fresh local Korean produce mixed with high-grade imported meats.</p>
+        </div>
+
+        <!-- Korean Official Origin Compliance Table -->
+        <div class="border-2 border-black bg-white p-1 shadow-[3px_3px_0_0_#000]">
+          <table class="w-full text-left text-[11px] border-collapse">
+            <thead>
+              <tr class="bg-[#ffca3a] text-black border-b-2 border-black text-[9px] font-arcade">
+                <th class="p-2.5">Ingredient (재료)</th>
+                <th class="p-2.5">Origin (원산지)</th>
+                <th class="p-2.5">Notes</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 text-gray-900" id="originTableBody">
+              <!-- Dynamically Populated -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="border-2 border-black p-3 bg-orange-50 text-[10px] text-gray-800 space-y-1 shadow-[2px_2px_0_0_#000]">
+          <p class="text-red-600 font-bold font-arcade text-[9px]">⚠️ ALLERGEN NOTICE (알레르기 안내):</p>
+          <p>Contains corn, gluten, cilantro, onions, dairy, and lime juice. Let us know if you have severe allergies!</p>
+        </div>
+      </div>
+
+      <!-- Modal Footer Pagination -->
+      <div class="bg-[#ffca3a] border-t-4 border-black p-3.5 flex items-center justify-between">
+        <button id="prevBtn" onclick="changePage(-1)" disabled class="pixel-btn-sky opacity-50 px-3 py-2 text-[9px] font-arcade cursor-not-allowed">
+          ◀ PREV PAGE
+        </button>
+
+        <div class="text-[10px] font-arcade text-black font-bold" id="pageIndicator">
+          PG 1 / 2
+        </div>
+
+        <button id="nextBtn" onclick="changePage(1)" class="pixel-btn-sky px-3 py-2 text-[9px] font-arcade">
+          NEXT PAGE ➔
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    lucide.createIcons();
+
+    // ------------------------------------------------------------------
+    // LIGHTING PALETTES (Daylight, Dawn, Sunset)
+    // ------------------------------------------------------------------
+    const PALETTES = {
+      day: {
+        bg: '#87ceeb', // Sky Blue
+        grass: '#a3e635', // Vibrant Lime Green
+        grassPattern: '#84cc16',
+        road: '#94a3b8', // Bright Slate
+        roadDash: '#facc15',
+        curb: '#cbd5e1',
+        buildingRoof: ['#ff5964', '#35a7ff', '#ffca3a'],
+        buildingBody: '#ffffff',
+        window: '#7dd3fc',
+        treeLeaves: '#22c55e',
+        treeTop: '#4ade80',
+        trunk: '#854d0e',
+        sunColor: '#fef08a',
+        water: '#38bdf8'
+      },
+      dawn: {
+        bg: '#fdba74', // Soft Dawn Peach
+        grass: '#86efac',
+        grassPattern: '#4ade80',
+        road: '#64748b',
+        roadDash: '#fef08a',
+        curb: '#94a3b8',
+        buildingRoof: ['#f43f5e', '#a855f7', '#fb923c'],
+        buildingBody: '#fef3c7',
+        window: '#fde047',
+        treeLeaves: '#15803d',
+        treeTop: '#22c55e',
+        trunk: '#713f12',
+        sunColor: '#f97316',
+        water: '#60a5fa'
+      },
+      sunset: {
+        bg: '#f43f5e', // Golden Sunset Coral
+        grass: '#a3e635',
+        grassPattern: '#65a30d',
+        road: '#475569',
+        roadDash: '#fef08a',
+        curb: '#64748b',
+        buildingRoof: ['#fb923c', '#e11d48', '#8b5cf6'],
+        buildingBody: '#ffedd5',
+        window: '#facc15',
+        treeLeaves: '#166534',
+        treeTop: '#15803d',
+        trunk: '#542d0c',
+        sunColor: '#fb923c',
+        water: '#818cf8'
+      }
+    };
+
+    let activeLighting = 'day';
+
+    function setTimeOfDay(mode) {
+      activeLighting = mode;
+      document.querySelectorAll('.pixel-btn-mode').forEach(b => b.classList.remove('active'));
+      document.getElementById(`btn-${mode}`).classList.add('active');
+    }
+
+    // ------------------------------------------------------------------
+    // MENU DATA
+    // ------------------------------------------------------------------
+    const menuItems = [
+      {
+        id: 'taco-1',
+        name: 'Carne Asada Taco',
+        krName: '카르네 아사다 타코',
+        price: '₩4,500',
+        desc: 'Charred flank steak, cilantro, diced white onion, salsa verde on handmade corn tortilla.',
+        stock: 6,
+        icon: '🥩'
+      },
+      {
+        id: 'taco-2',
+        name: 'Birria Quesa Taco',
+        krName: '비리아 퀘사 타코',
+        price: '₩5,000',
+        desc: 'Slow-braised beef, melted Oaxaca cheese, rich consommé dip, onion & cilantro.',
+        stock: 18,
+        icon: '🧀'
+      },
+      {
+        id: 'taco-3',
+        name: 'Al Pastor Taco',
+        krName: '알 파스토르 타코',
+        price: '₩4,500',
+        desc: 'Achiote-marinated roasted pork, grilled pineapple, salsa roja, fresh cilantro.',
+        stock: 24,
+        icon: '🍍'
+      },
+      {
+        id: 'taco-4',
+        name: 'Baja Fish Taco',
+        krName: '바하 피쉬 타코',
+        price: '₩5,000',
+        desc: 'Crispy beer-battered fish, chipotle crema, shredded cabbage slaw, lime.',
+        stock: 3,
+        icon: '🐟'
+      }
+    ];
+
+    const originData = [
+      { ingredient: 'Beef (소고기)', origin: 'USA / Australia', note: 'USDA Choice Flank & Chuck' },
+      { ingredient: 'Pork (돼지고기)', origin: 'Domestic Korea (국내산)', note: 'Jeju Fresh Pork Shoulder' },
+      { ingredient: 'Chicken (닭고기)', origin: 'Domestic Korea (국내산)', note: 'Antibiotic-free Thigh' },
+      { ingredient: 'Fish (대구)', origin: 'Russia / Pacific', note: 'Wild-Caught Cod Fillet' },
+      { ingredient: 'Veggies (채소)', origin: 'Domestic Korea (국내산)', note: 'Daily Fresh Garak Market' },
+      { ingredient: 'Cheese (치즈)', origin: 'USA / Mexico', note: 'Authentic Oaxaca & Cheddar' }
+    ];
+
+    function renderMenu() {
+      const grid = document.getElementById('menuGrid');
+      grid.innerHTML = menuItems.map(item => {
+        const isLow = item.stock <= 8;
+        return `
+          <div class="border-2 border-black bg-white p-3 flex flex-col justify-between shadow-[3px_3px_0_0_#000]">
+            <div>
+              <div class="flex items-start justify-between gap-2 mb-1.5">
+                <div>
+                  <h3 class="text-black font-bold text-xs">${item.icon} ${item.name}</h3>
+                  <p class="text-[9px] text-gray-600 font-bold">${item.krName}</p>
+                </div>
+                <span class="font-arcade text-black font-bold text-[10px] bg-[#ffca3a] px-1.5 py-0.5 border border-black">${item.price}</span>
+              </div>
+              <p class="text-[10px] text-gray-700 mb-3 leading-relaxed">${item.desc}</p>
+            </div>
+
+            <div class="flex items-center justify-between border-t border-black pt-2 text-[10px]">
+              <span class="text-gray-800 font-bold">STOCK:</span>
+              <span class="font-arcade font-bold ${isLow ? 'text-red-600 animate-pulse' : 'text-emerald-700'}">
+                ${item.stock} LEFT ${isLow ? '🚨' : ''}
+              </span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      const originBody = document.getElementById('originTableBody');
+      originBody.innerHTML = originData.map(row => `
+        <tr class="hover:bg-amber-50">
+          <td class="p-2 font-bold text-black">${row.ingredient}</td>
+          <td class="p-2 text-emerald-800 font-bold">${row.origin}</td>
+          <td class="p-2 text-gray-700 text-[10px]">${row.note}</td>
+        </tr>
+      `).join('');
+    }
+
+    // Modal Navigation
+    let currentPage = 1;
+
+    function toggleMenu(show) {
+      document.getElementById('menuModal').classList.toggle('hidden', !show);
+    }
+
+    function changePage(delta) {
+      currentPage = Math.max(1, Math.min(2, currentPage + delta));
+
+      const page1 = document.getElementById('page1');
+      const page2 = document.getElementById('page2');
+      const prevBtn = document.getElementById('prevBtn');
+      const nextBtn = document.getElementById('nextBtn');
+      const pageIndicator = document.getElementById('pageIndicator');
+      const modalTitle = document.getElementById('modalTitle');
+
+      if (currentPage === 1) {
+        page1.classList.remove('hidden');
+        page2.classList.add('hidden');
+        prevBtn.disabled = true;
+        prevBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        nextBtn.disabled = false;
+        nextBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        modalTitle.innerText = "TACOTACO MENU [PAGE 1/2]";
+      } else {
+        page1.classList.add('hidden');
+        page2.classList.remove('hidden');
+        prevBtn.disabled = false;
+        prevBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        nextBtn.disabled = true;
+        nextBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        modalTitle.innerText = "INGREDIENTS & SOURCING [PAGE 2/2]";
+      }
+
+      pageIndicator.innerText = `PG ${currentPage} / 2`;
+    }
+
+    // Timer
+    let totalSeconds = 6139;
+    setInterval(() => {
+      if (totalSeconds > 0) totalSeconds--;
+      const hrs = Math.floor(totalSeconds / 3600).toString().padStart(2, '0');
+      const mins = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0');
+      const secs = (totalSeconds % 60).toString().padStart(2, '0');
+      document.getElementById('countdownTimer').innerText = `${hrs}:${mins}:${secs}`;
+    }, 1000);
+
+    // ------------------------------------------------------------------
+    // CANVAS FULLSCREEN VIBRANT DAYLIGHT PIXEL MAP ENGINE
+    // ------------------------------------------------------------------
+    const canvas = document.getElementById('mapCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let width = canvas.width = window.innerWidth;
+    let height = canvas.height = window.innerHeight;
+
+    window.addEventListener('resize', () => {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    });
+
+    let cameraX = 0, cameraY = 0;
+    let isDragging = false, dragStartX = 0, dragStartY = 0;
+
+    canvas.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      dragStartX = e.clientX - cameraX;
+      dragStartY = e.clientY - cameraY;
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (isDragging) {
+        cameraX = e.clientX - dragStartX;
+        cameraY = e.clientY - dragStartY;
+      }
+    });
+
+    window.addEventListener('mouseup', () => isDragging = false);
+
+    const TILE = 36;
+    const COLS = 50;
+    const ROWS = 40;
+
+    // Route Waypoints for Animated Taco Truck
+    const waypoints = [
+      { x: 8 * TILE, y: 12 * TILE },
+      { x: 28 * TILE, y: 12 * TILE },
+      { x: 28 * TILE, y: 26 * TILE },
+      { x: 12 * TILE, y: 26 * TILE },
+      { x: 12 * TILE, y: 12 * TILE }
+    ];
+
+    let truckIdx = 0;
+    let truckX = waypoints[0].x;
+    let truckY = waypoints[0].y;
+    let truckSpeed = 1.1;
+
+    function updateTruck() {
+      const target = waypoints[(truckIdx + 1) % waypoints.length];
+      const dx = target.x - truckX;
+      const dy = target.y - truckY;
+      const dist = Math.hypot(dx, dy);
+
+      if (dist < truckSpeed) {
+        truckX = target.x;
+        truckY = target.y;
+        truckIdx = (truckIdx + 1) % waypoints.length;
+      } else {
+        truckX += (dx / dist) * truckSpeed;
+        truckY += (dy / dist) * truckSpeed;
+      }
+    }
+
+    function drawPixelBox(x, y, w, h, fill, border = '#000000') {
+      ctx.fillStyle = border;
+      ctx.fillRect(x - 2, y - 2, w + 4, h + 4);
+      ctx.fillStyle = fill;
+      ctx.fillRect(x, y, w, h);
+    }
+
+    function drawPixelTree(x, y, pal) {
+      // Trunk
+      ctx.fillStyle = pal.trunk;
+      ctx.fillRect(x + 14, y + 22, 8, 14);
+      // Main Foliage
+      drawPixelBox(x + 4, y + 8, 28, 18, pal.treeLeaves, '#000000');
+      // Top Highlight Layer
+      ctx.fillStyle = pal.treeTop;
+      ctx.fillRect(x + 8, y + 4, 20, 10);
+    }
+
+    function drawPixelBuilding(x, y, type, pal) {
+      const roofColor = pal.buildingRoof[type % pal.buildingRoof.length];
+      
+      // Building Body
+      drawPixelBox(x, y, 64, 52, pal.buildingBody, '#000000');
+      
+      // Roof Top
+      ctx.fillStyle = roofColor;
+      ctx.fillRect(x - 2, y - 8, 68, 8);
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(x - 2, y, 68, 2);
+
+      // Bright Windows
+      ctx.fillStyle = pal.window;
+      ctx.fillRect(x + 10, y + 12, 12, 12);
+      ctx.fillRect(x + 42, y + 12, 12, 12);
+      ctx.fillRect(x + 10, y + 32, 12, 12);
+      ctx.fillRect(x + 42, y + 32, 12, 12);
+
+      // Window Black Frames
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(x + 10, y + 12, 12, 12);
+      ctx.strokeRect(x + 42, y + 12, 12, 12);
+    }
+
+    function renderScene() {
+      const pal = PALETTES[activeLighting];
+
+      // Sky Background
+      ctx.fillStyle = pal.bg;
+      ctx.fillRect(0, 0, width, height);
+
+      ctx.save();
+      ctx.translate(Math.floor(cameraX), Math.floor(cameraY));
+
+      // Draw Grid Grass & Streets
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          const x = c * TILE;
+          const y = r * TILE;
+
+          const isRoadH = (r === 12 || r === 26);
+          const isRoadV = (c === 8 || c === 28 || c === 12);
+
+          if (isRoadH || isRoadV) {
+            // Road Surface
+            ctx.fillStyle = pal.road;
+            ctx.fillRect(x, y, TILE, TILE);
+            
+            // Curb
+            ctx.fillStyle = pal.curb;
+            ctx.fillRect(x, y, TILE, 3);
+
+            // Yellow Center Stripes
+            if ((c % 2 === 0 && isRoadH) || (r % 2 === 0 && isRoadV)) {
+              ctx.fillStyle = pal.roadDash;
+              ctx.fillRect(x + 14, y + 16, 10, 4);
+            }
+          } else {
+            // Bright Lush Grass
+            ctx.fillStyle = pal.grass;
+            ctx.fillRect(x, y, TILE, TILE);
+
+            // Grass Pixel Pattern
+            if ((r + c) % 3 === 0) {
+              ctx.fillStyle = pal.grassPattern;
+              ctx.fillRect(x + 10, y + 10, 6, 6);
+            }
+          }
+        }
+      }
+
+      // Draw Buildings & Trees
+      for (let r = 0; r < ROWS; r += 3) {
+        for (let c = 0; c < COLS; c += 3) {
+          const x = c * TILE;
+          const y = r * TILE;
+          const isRoadH = (r >= 11 && r <= 13) || (r >= 25 && r <= 27);
+          const isRoadV = (c >= 7 && c <= 9) || (c >= 27 && c <= 29) || (c >= 11 && c <= 13);
+
+          if (!isRoadH && !isRoadV) {
+            if ((r * c) % 7 === 1 && c < COLS - 2 && r < ROWS - 2) {
+              drawPixelBuilding(x, y, (r + c), pal);
+            } else if ((r + c) % 5 === 2) {
+              drawPixelTree(x, y, pal);
+            }
+          }
+        }
+      }
+
+      // TACO TRUCK ANIMATION
+      updateTruck();
+
+      // Shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.fillRect(truckX - 22, truckY + 12, 48, 10);
+
+      // Bright Red Truck Body
+      drawPixelBox(truckX - 22, truckY - 18, 44, 28, '#ff5964', '#000000');
+      
+      // Windshield
+      ctx.fillStyle = '#7dd3fc';
+      ctx.fillRect(truckX + 8, truckY - 14, 12, 16);
+      ctx.strokeStyle = '#000000';
+      ctx.strokeRect(truckX + 8, truckY - 14, 12, 16);
+
+      // Roof Taco Sign
+      drawPixelBox(truckX - 16, truckY - 32, 32, 12, '#ffca3a', '#000000');
+      ctx.fillStyle = '#000000';
+      ctx.font = '8px "Press Start 2P"';
+      ctx.fillText('TACO', truckX - 12, truckY - 23);
+
+      // Animated Flag / Beacon Pin
+      const bounceY = Math.sin(Date.now() / 180) * 5;
+      ctx.fillStyle = '#ff5964';
+      ctx.fillRect(truckX - 4, truckY - 48 + bounceY, 10, 10);
+      ctx.strokeStyle = '#000000';
+      ctx.strokeRect(truckX - 4, truckY - 48 + bounceY, 10, 10);
+
+      ctx.restore();
+
+      requestAnimationFrame(renderScene);
+    }
+
+    renderMenu();
+    renderScene();
+  </script>
+</body>
+</html>
