@@ -879,12 +879,25 @@
       requestAnimationFrame(renderPrecipitation);
     }
 
+    function applyDayNightMapFilter(isDay) {
+  const mapTileElement = document.querySelector('.leaflet-tile-pane');
+  if (!mapTileElement) return;
+
+  if (isDay === 1) {
+    // Normal bright daytime map
+    mapTileElement.style.filter = 'brightness(100%) contrast(100%)';
+  } else {
+    // Dark mode map for nighttime
+    mapTileElement.style.filter = 'brightness(65%) contrast(125%) hue-rotate(180deg) invert(80%)';
+  }
+}
+
     // 7. MENU MODAL SYSTEM
     const menuItems = [
-      { name: 'Carne Asada Taco', krName: '카르네 아사다 타코', price: '₩4,500', desc: '직화로 구운 부채살, 고수, 다진 양파, 살사 베르데', stock: 6, icon: '🥩' },
-      { name: 'Birria Quesa Taco', krName: '비리아 퀘사 타코', price: '₩5,000', desc: '푹 삶은 우삼겹, 듬뿍 넣은 와하카 치즈, 비리아 콘소메 스튜', stock: 18, icon: '🧀' },
-      { name: 'Al Pastor Taco', krName: '알 파스토르 타코', price: '₩4,500', desc: '멕시칸 양념 돼지고기, 구운 파인애플, 살사 로하', stock: 24, icon: '🍍' },
-      { name: 'Baja Fish Taco', krName: '바하 피쉬 타코', price: '₩5,000', desc: '바삭한 맥주 튀김 옷을 입힌 대구살, 치폴레 크레마, 양배추 슬로', stock: 3, icon: '🐟' }
+      { name: 'Carne Asada Taco', krName: '카르네 아사다 타코', price: '₩ 4,500', desc: '직화로 구운 부채살, 고수, 다진 양파, 살사 베르데', stock: 6, icon: '🥩' },
+      { name: 'Birria Quesa Taco', krName: '비리아 퀘사 타코', price: '₩ 5,000', desc: '푹 삶은 우삼겹, 듬뿍 넣은 와하카 치즈, 비리아 콘소메 스튜', stock: 18, icon: '🧀' },
+      { name: 'Al Pastor Taco', krName: '알 파스토르 타코', price: '₩ 4,500', desc: '멕시칸 양념 돼지고기, 구운 파인애플, 살사 로하', stock: 24, icon: '🍍' },
+      { name: 'Baja Fish Taco', krName: '바하 피쉬 타코', price: '₩ 5,000', desc: '바삭한 맥주 튀김 옷을 입힌 대구살, 치폴레 크레마, 양배추 슬로', stock: 3, icon: '🐟' }
     ];
 
     const originData = [
@@ -924,14 +937,46 @@
     }
 
     let currentPage = 1;
-    function toggleMenu(show) { document.getElementById('menuModal').classList.toggle('hidden', !show); }
+
+    function toggleMenu(show) { 
+      const modal = document.getElementById('menuModal');
+      if (modal) {
+        modal.classList.toggle('hidden', !show); 
+      }
+    }
+
     function changePage(delta) {
       currentPage = Math.max(1, Math.min(2, currentPage + delta));
-      document.getElementById('page1').classList.toggle('hidden', currentPage !== 1);
-      document.getElementById('page2').classList.toggle('hidden', currentPage !== 2);
-      document.getElementById('prevBtn').disabled = currentPage === 1;
-      document.getElementById('nextBtn').disabled = currentPage === 2;
-      document.getElementById('pageIndicator').innerText = `PG ${currentPage} / 2`;
+
+      // 페이지 보이기/숨기기
+      const page1 = document.getElementById('page1');
+      const page2 = document.getElementById('page2');
+      if (page1) page1.classList.toggle('hidden', currentPage !== 1);
+      if (page2) page2.classList.toggle('hidden', currentPage !== 2);
+      
+      // 페이지 표시 업데이트
+      const indicator = document.getElementById('pageIndicator');
+      if (indicator) indicator.innerText = `PG ${currentPage} / 2`;
+
+      // 이전(PREV) 버튼 상태 업데이트
+      const prevBtn = document.getElementById('prevBtn');
+      if (prevBtn) {
+        const isFirst = (currentPage === 1);
+        prevBtn.disabled = isFirst;
+        prevBtn.classList.toggle('opacity-50', isFirst);
+        prevBtn.classList.toggle('cursor-not-allowed', isFirst);
+        prevBtn.classList.toggle('cursor-pointer', !isFirst);
+      }
+
+      // 다음(NEXT) 버튼 상태 업데이트
+      const nextBtn = document.getElementById('nextBtn');
+      if (nextBtn) {
+        const isLast = (currentPage === 2);
+        nextBtn.disabled = isLast;
+        nextBtn.classList.toggle('opacity-50', isLast);
+        nextBtn.classList.toggle('cursor-not-allowed', isLast);
+        nextBtn.classList.toggle('cursor-pointer', !isLast);
+      }
     }
 
     // INITIALIZATION
