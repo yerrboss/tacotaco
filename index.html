@@ -169,65 +169,6 @@
       line-height: 1;
       filter: drop-shadow(0px 4px 0px rgba(0,0,0,0.7));
     }
-
-    /* SCENE IN HOLIDAY MODAL */
-    .modal-scene-container {
-      position: relative;
-      width: 100%;
-      height: 180px;
-      background: linear-gradient(180deg, #38bdf8 0%, #38bdf8 65%, #4ade80 65%, #22c55e 100%);
-      border: 3px solid #000;
-      box-shadow: inset 0 0 0 2px #fff, 3px 3px 0 0 #000;
-      overflow: hidden;
-    }
-
-    /* TRUCK BEHIND CHARACTER */
-    .modal-truck-background {
-      position: absolute;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      z-index: 1;
-    }
-
-    .modal-truck-svg {
-      width: 180px;
-      height: 100px;
-      filter: drop-shadow(2px 3px 0px rgba(0,0,0,0.4));
-      animation: truckBounce 1.8s infinite ease-in-out;
-    }
-
-    @keyframes truckBounce {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-3px); }
-    }
-
-    /* ANIMATED MAPLESTORY STYLE CHARACTER IN FRONT */
-    .pixel-character-container {
-      position: absolute;
-      bottom: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 2;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      animation: characterMapleBounce 1.6s infinite ease-in-out;
-    }
-
-    @keyframes characterMapleBounce {
-      0%, 100% { transform: translateX(-50%) translateY(0); }
-      50% { transform: translateX(-50%) translateY(-5px); }
-    }
-
-    .pixel-character-svg {
-      width: 90px;
-      height: 95px;
-      filter: drop-shadow(2px 3px 0px rgba(0,0,0,0.45));
-    }
   </style>
 </head>
 <body class="bg-[#0f172a] text-black overflow-hidden w-screen h-screen relative select-none">
@@ -267,12 +208,12 @@
       <div class="mt-3 border-t border-black/20 pt-2 flex items-center justify-between">
         <label class="flex items-center gap-1.5 text-[11px] font-bold text-gray-800 cursor-pointer select-none">
           <input type="checkbox" onchange="dismissNoticeForToday(this.checked)" class="w-3.5 h-3.5 accent-red-600 border-2 border-black cursor-pointer">
-          <span>오늘 하루 동안 보지 않기</span>
+          <span id="lblNoticeHide">오늘 하루 동안 보지 않기</span>
         </label>
 
         <div class="flex gap-1.5">
-          <button onclick="editNotice()" class="text-[10px] bg-sky-200 border border-black px-2 py-1 font-bold hover:bg-sky-300">✏️ 수정</button>
-          <button onclick="toggleDesktopNotice(false)" class="text-[10px] bg-amber-200 border border-black px-2 py-1 font-bold hover:bg-amber-300">닫기</button>
+          <button onclick="editNotice()" class="text-[10px] bg-sky-200 border border-black px-2 py-1 font-bold hover:bg-sky-300" id="btnEditNotice">✏️ 수정</button>
+          <button onclick="toggleDesktopNotice(false)" class="text-[10px] bg-amber-200 border border-black px-2 py-1 font-bold hover:bg-amber-300" id="btnCloseNotice">닫기</button>
         </div>
       </div>
     </div>
@@ -344,11 +285,11 @@
     <div class="pixel-box-vibrant p-2 flex flex-col gap-1.5 max-w-xs">
       <span class="font-bold text-[10px] text-gray-800" id="lblSeoulSpots">📍 스팟 이동 (SEOUL SPOTS):</span>
       <div class="flex flex-wrap gap-1">
-        <button onclick="moveToSpot(0)" class="location-btn bg-orange-100 text-black">홍대</button>
-        <button onclick="moveToSpot(1)" class="location-btn bg-red-100 text-black">경복궁</button>
-        <button onclick="moveToSpot(2)" class="location-btn bg-green-100 text-black">남산</button>
-        <button onclick="moveToSpot(3)" class="location-btn bg-blue-100 text-black">강남</button>
-        <button onclick="moveToSpot(4)" class="location-btn bg-purple-100 text-black">여의도</button>
+        <button onclick="moveToSpot(0)" class="location-btn bg-orange-100 text-black" id="spotBtn0">홍대</button>
+        <button onclick="moveToSpot(1)" class="location-btn bg-red-100 text-black" id="spotBtn1">경복궁</button>
+        <button onclick="moveToSpot(2)" class="location-btn bg-green-100 text-black" id="spotBtn2">남산</button>
+        <button onclick="moveToSpot(3)" class="location-btn bg-blue-100 text-black" id="spotBtn3">강남</button>
+        <button onclick="moveToSpot(4)" class="location-btn bg-purple-100 text-black" id="spotBtn4">여의도</button>
       </div>
 
       <!-- Visitor Counter Stats -->
@@ -356,11 +297,6 @@
         <span class="text-gray-700">👀 <span id="lblVisits">방문자:</span> <strong id="totalVisitsCount" class="text-blue-600">--</strong></span>
         <span class="text-gray-700">🔄 <span id="lblRevisits">재방문:</span> <strong id="revisitsCount" class="text-emerald-600">--</strong></span>
       </div>
-
-      <!-- Holiday Modal Open Button -->
-      <button onclick="toggleHolidayModal(true)" class="mt-1 bg-pink-200 border border-black text-[10px] font-bold py-1 px-2 hover:bg-pink-300 text-center flex items-center justify-center gap-1 cursor-pointer">
-        <span>🎎</span> <span id="btnHolidayToggle">명절/공휴일 인사 팝업 보기</span>
-      </button>
     </div>
   </div>
 
@@ -413,20 +349,17 @@
       <div class="flex items-center justify-between text-[10px] font-bold">
         <span>👀 <span id="lblVisitsMobile">방문:</span> <strong id="totalVisitsCountMobile" class="text-blue-600">--</strong></span>
         <span>🔄 <span id="lblRevisitsMobile">재방문:</span> <strong id="revisitsCountMobile" class="text-emerald-600">--</strong></span>
-        <button onclick="toggleHolidayModal(true)" class="bg-pink-200 border border-black px-1.5 py-0.5 font-bold">🎎 명절 인사</button>
       </div>
 
       <div class="flex items-center gap-1 overflow-x-auto pixel-scroll pb-1">
-        <button onclick="moveToSpot(0)" class="location-btn bg-orange-100 text-black shrink-0">홍대</button>
-        <button onclick="moveToSpot(1)" class="location-btn bg-red-100 text-black shrink-0">경복궁</button>
-        <button onclick="moveToSpot(2)" class="location-btn bg-green-100 text-black shrink-0">남산</button>
-        <button onclick="moveToSpot(3)" class="location-btn bg-blue-100 text-black shrink-0">강남</button>
-        <button onclick="moveToSpot(4)" class="location-btn bg-purple-100 text-black shrink-0">여의도</button>
+        <button onclick="moveToSpot(0)" class="location-btn bg-orange-100 text-black shrink-0" id="spotBtnMobile0">홍대</button>
+        <button onclick="moveToSpot(1)" class="location-btn bg-red-100 text-black shrink-0" id="spotBtnMobile1">경복궁</button>
+        <button onclick="moveToSpot(2)" class="location-btn bg-green-100 text-black shrink-0" id="spotBtnMobile2">남산</button>
+        <button onclick="moveToSpot(3)" class="location-btn bg-blue-100 text-black shrink-0" id="spotBtnMobile3">강남</button>
+        <button onclick="moveToSpot(4)" class="location-btn bg-purple-100 text-black shrink-0" id="spotBtnMobile4">여의도</button>
       </div>
     </div>
   </div>
-
-
 
   <!-- MOBILE NOTICE MODAL -->
   <div id="noticeModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-sm p-4 hidden">
@@ -445,12 +378,12 @@
       <div class="mt-3 border-t border-black/20 pt-2 flex items-center justify-between">
         <label class="flex items-center gap-1.5 text-[11px] font-bold text-gray-800 cursor-pointer select-none">
           <input type="checkbox" onchange="dismissNoticeForToday(this.checked)" class="w-3.5 h-3.5 accent-red-600 border-2 border-black cursor-pointer">
-          <span>오늘 하루 동안 보지 않기</span>
+          <span id="lblNoticeHideMobile">오늘 하루 동안 보지 않기</span>
         </label>
 
         <div class="flex gap-1.5">
-          <button onclick="editNotice()" class="pixel-btn-sky px-3 py-1 text-xs font-bold cursor-pointer">✏️ 수정</button>
-          <button onclick="toggleMobileNotice(false)" class="pixel-btn-sun px-3 py-1 text-xs font-bold cursor-pointer">닫기</button>
+          <button onclick="editNotice()" class="pixel-btn-sky px-3 py-1 text-xs font-bold cursor-pointer" id="btnEditNoticeMobile">✏️ 수정</button>
+          <button onclick="toggleMobileNotice(false)" class="pixel-btn-sun px-3 py-1 text-xs font-bold cursor-pointer" id="btnCloseNoticeMobile">닫기</button>
         </div>
       </div>
     </div>
@@ -502,7 +435,7 @@
   <script>
     lucide.createIcons();
 
-    // 1. MULTILINGUAL DICTIONARY
+    // 1. MULTILINGUAL DICTIONARY WITH MENU & ORIGIN TRANSLATIONS
     const translations = {
       ko: {
         noticeKor: "공지!",
@@ -516,13 +449,26 @@
         timeLeft: "남은 시간:",
         visits: "방문자:",
         revisits: "재방문:",
-        holidayBtn: "명절 인사 팝업 보기",
-        holidayHeader: "명절 특별 인사",
-        holidayTitle: "풍성한 한가위 되세요!",
-        holidayDesc: "즐거운 명절을 맞아 타코타코 푸드트럭을 찾아주신 모든 분들께 감사드립니다. 맛있는 타코와 함께 따뜻한 시간 보내세요!",
         thIngredient: "재료 (Item)",
         thOrigin: "원산지 (Origin)",
-        thNotes: "비고 (Notes)"
+        thNotes: "비고 (Notes)",
+        hideNotice: "오늘 하루 동안 보지 않기",
+        editNoticeBtn: "✏️ 수정",
+        closeBtn: "닫기",
+        stockLeftText: "개 남음",
+        spots: ["홍대", "경복궁", "남산", "강남", "여의도"],
+        menuItems: [
+          { name: 'Carne Asada Taco', krName: '카르네 아사다 타코', price: '₩ 4,500', desc: '직화로 구운 부채살, 고수, 다진 양파, 살사 베르데', stock: 6, icon: '🥩' },
+          { name: 'Birria Quesa Taco', krName: '비리아 퀘사 타코', price: '₩ 5,000', desc: '푹 삶은 우삼겹, 듬뿍 넣은 와하카 치즈, 비리아 콘소메 스튜', stock: 18, icon: '🧀' },
+          { name: 'Al Pastor Taco', krName: '알 파스토르 타코', price: '₩ 4,500', desc: '멕시칸 양념 돼지고기, 구운 파인애플, 살사 로하', stock: 24, icon: '🍍' },
+          { name: 'Baja Fish Taco', krName: '바하 피쉬 타코', price: '₩ 5,000', desc: '바삭한 맥주 튀김 옷을 입힌 대구살, 치폴레 크레마, 양배추 슬로', stock: 3, icon: '🐟' }
+        ],
+        originData: [
+          { ingredient: '소고기 (Beef)', origin: '미국산 / 호주산', note: 'USDA 초이스 등급 부채살 및 양지' },
+          { ingredient: '돼지고기 (Pork)', origin: '국내산 (제주)', note: '제주산 무항생제 생목살' },
+          { ingredient: '닭고기 (Chicken)', origin: '국내산', note: '신선 냉장 정육 다리살' },
+          { ingredient: '대구 (Fish)', origin: '러시아산 / 원양산', note: '자연산 대구 순살 필렛' }
+        ]
       },
       en: {
         noticeKor: "ANNOUNCEMENT",
@@ -536,13 +482,26 @@
         timeLeft: "Time Left:",
         visits: "Total Visits:",
         revisits: "Revisits:",
-        holidayBtn: "Holiday Greeting Popup",
-        holidayHeader: "HAPPY HOLIDAYS",
-        holidayTitle: "Happy Chuseok Holidays!",
-        holidayDesc: "Thank you for visiting TacoTaco food truck during this holiday season. Enjoy delicious tacos with your loved ones!",
         thIngredient: "Ingredient",
         thOrigin: "Origin",
-        thNotes: "Notes"
+        thNotes: "Notes",
+        hideNotice: "Don't show again today",
+        editNoticeBtn: "✏️ Edit",
+        closeBtn: "Close",
+        stockLeftText: " left",
+        spots: ["Hongdae", "Palace", "Namsan", "Gangnam", "Yeouido"],
+        menuItems: [
+          { name: 'Carne Asada Taco', krName: 'Grilled Beef Taco', price: '₩ 4,500', desc: 'Flame-grilled flat iron steak, cilantro, diced onions, green salsa', stock: 6, icon: '🥩' },
+          { name: 'Birria Quesa Taco', krName: 'Cheese & Beef Taco', price: '₩ 5,000', desc: 'Slow-braised beef brisket, melted Oaxaca cheese, consommé dip', stock: 18, icon: '🧀' },
+          { name: 'Al Pastor Taco', krName: 'Marinated Pork Taco', price: '₩ 4,500', desc: 'Mexican spiced pork, roasted pineapple, red salsa', stock: 24, icon: '🍍' },
+          { name: 'Baja Fish Taco', krName: 'Crispy Cod Taco', price: '₩ 5,000', desc: 'Beer-battered cod fillet, chipotle crema, cabbage slaw', stock: 3, icon: '🐟' }
+        ],
+        originData: [
+          { ingredient: 'Beef', origin: 'USA / Australia', note: 'USDA Choice Flat Iron & Brisket' },
+          { ingredient: 'Pork', origin: 'Domestic (Jeju)', note: 'Antibiotic-free fresh pork shoulder' },
+          { ingredient: 'Chicken', origin: 'Domestic (Korea)', note: 'Fresh chilled boneless thigh' },
+          { ingredient: 'Cod Fish', origin: 'Russia / Deep Sea', note: 'Wild-caught boneless fillet' }
+        ]
       },
       fr: {
         noticeKor: "AVIS",
@@ -556,13 +515,26 @@
         timeLeft: "Temps rest:",
         visits: "Visites:",
         revisits: "Revisites:",
-        holidayBtn: "Message de Fêtes",
-        holidayHeader: "JOYEUSES FÊTES",
-        holidayTitle: "Joyeuses Fêtes de Chuseok!",
-        holidayDesc: "Merci de visiter le food truck TacoTaco pendant ces fêtes. Profitez de délicieux tacos !",
         thIngredient: "Ingrédient",
         thOrigin: "Origine",
-        thNotes: "Notes"
+        thNotes: "Notes",
+        hideNotice: "Ne plus afficher aujourd'hui",
+        editNoticeBtn: "✏️ Éditer",
+        closeBtn: "Fermer",
+        stockLeftText: " restants",
+        spots: ["Hongdae", "Palais", "Namsan", "Gangnam", "Yeouido"],
+        menuItems: [
+          { name: 'Taco Carne Asada', krName: 'Taco au Bœuf Grillé', price: '₩ 4,500', desc: 'Bœuf grillé, coriandre, oignons, salsa verte', stock: 6, icon: '🥩' },
+          { name: 'Taco Birria Quesa', krName: 'Taco Bœuf & Fromage', price: '₩ 5,000', desc: 'Bœuf mijoté, fromage Oaxaca fondu, bouillon consommé', stock: 18, icon: '🧀' },
+          { name: 'Taco Al Pastor', krName: 'Taco Porc Épicé', price: '₩ 4,500', desc: 'Porc épicé mexicain, ananas rôti, salsa rouge', stock: 24, icon: '🍍' },
+          { name: 'Taco Baja Fish', krName: 'Taco Poisson Croustillant', price: '₩ 5,000', desc: 'Mors de cabillaud fris à la bière, crème chipotle, chou', stock: 3, icon: '🐟' }
+        ],
+        originData: [
+          { ingredient: 'Bœuf', origin: 'USA / Australie', note: 'Morceaux de bœuf sélection Choice' },
+          { ingredient: 'Porc', origin: 'Domestique (Jeju)', note: 'Épaule de porc frais sans antibiotiques' },
+          { ingredient: 'Poulet', origin: 'Domestique (Corée)', note: 'Cuisse de poulet frais désossée' },
+          { ingredient: 'Cabillaud', origin: 'Russie / Haute mer', note: 'Filet de cabillaud sauvage' }
+        ]
       },
       es: {
         noticeKor: "AVISO",
@@ -576,13 +548,26 @@
         timeLeft: "Restante:",
         visits: "Visitas:",
         revisits: "Revisitas:",
-        holidayBtn: "Saludo de Fiestas",
-        holidayHeader: "FELICES FIESTAS",
-        holidayTitle: "¡Felices Fiestas de Chuseok!",
-        holidayDesc: "¡Gracias por visitar TacoTaco durante estas vacaciones! Disfruta de deliciosos tacos con tus seres queridos.",
         thIngredient: "Ingrediente",
         thOrigin: "Origen",
-        thNotes: "Notas"
+        thNotes: "Notas",
+        hideNotice: "No mostrar hoy",
+        editNoticeBtn: "✏️ Editar",
+        closeBtn: "Cerrar",
+        stockLeftText: " restantes",
+        spots: ["Hongdae", "Palacio", "Namsan", "Gangnam", "Yeouido"],
+        menuItems: [
+          { name: 'Taco de Carne Asada', krName: 'Taco de Res Asada', price: '₩ 4,500', desc: 'Carne de res a la parrilla, cilantro, cebolla, salsa verde', stock: 6, icon: '🥩' },
+          { name: 'Taco de Birria Quesa', krName: 'Taco de Queso y Res', price: '₩ 5,000', desc: 'Res estofada, queso Oaxaca fundido, consomé', stock: 18, icon: '🧀' },
+          { name: 'Taco al Pastor', krName: 'Taco de Cerdo Adobado', price: '₩ 4,500', desc: 'Cerdo marinado, piña asada, salsa roja', stock: 24, icon: '🍍' },
+          { name: 'Taco Baja Fish', krName: 'Taco de Pescado', price: '₩ 5,000', desc: 'Bacalao empanizado a la cerveza, crema de chipotle, col', stock: 3, icon: '🐟' }
+        ],
+        originData: [
+          { ingredient: 'Carne de Res', origin: 'EE. UU. / Australia', note: 'Corte USDA Choice' },
+          { ingredient: 'Carne de Cerdo', origin: 'Nacional (Jeju)', note: 'Lomo de cerdo sin antibióticos' },
+          { ingredient: 'Pollo', origin: 'Nacional (Corea)', note: 'Muslo de pollo deshuesado fresco' },
+          { ingredient: 'Bacalao', origin: 'Rusia / Alta Mar', note: 'Filete de bacalao silvestre' }
+        ]
       },
       ja: {
         noticeKor: "お知らせ",
@@ -591,18 +576,31 @@
         openMenu: "メニューを見る",
         weather: "天気:",
         temp: "気温:",
-        seoulSpots: "📍 스팟 이동:",
+        seoulSpots: "📍 スポット移動:",
         currentLoc: "現在地:",
         timeLeft: "残り時間:",
         visits: "訪問者:",
         revisits: "再訪問:",
-        holidayBtn: "祝日挨拶ポップアップ",
-        holidayHeader: "ハッピー ホリデー",
-        holidayTitle: "楽しい秋夕をお過ごしください！",
-        holidayDesc: "楽しい秋夕にTacoTacoフードトラックを訪れていただきありがとうございます。美味しいタコをお楽しみください！",
-        thIngredient: "메뉴",
-        thOrigin: "産地",
-        thNotes: "備考"
+        thIngredient: "材料",
+        thOrigin: "原産地",
+        thNotes: "備考",
+        hideNotice: "今日一日表示しない",
+        editNoticeBtn: "✏️ 編集",
+        closeBtn: "閉じる",
+        stockLeftText: "個残り",
+        spots: ["弘大", "景福宮", "南山", "江南", "汝矣島"],
+        menuItems: [
+          { name: 'Carne Asada Taco', krName: 'カルネアサダタコ', price: '₩ 4,500', desc: '直火焼き牛ミスジ、パクチー、刻み玉ねぎ、サルサベルデ', stock: 6, icon: '🥩' },
+          { name: 'Birria Quesa Taco', krName: 'ビリアクエサタコ', price: '₩ 5,000', desc: 'じっくり煮込んだ牛バラ肉、濃厚オアハカチーズ、コンソメスープ', stock: 18, icon: '🧀' },
+          { name: 'Al Pastor Taco', krName: 'アルパストールタコ', price: '₩ 4,500', desc: 'メキシカンスパイス豚肉、焼きパイナップル、サルサロハ', stock: 24, icon: '🍍' },
+          { name: 'Baja Fish Taco', krName: 'バハフィッシュタコ', price: '₩ 5,000', desc: 'サクサクのビール衣のタラ、チポトレクレマ、キャベツスロー', stock: 3, icon: '🐟' }
+        ],
+        originData: [
+          { ingredient: '牛肉 (Beef)', origin: 'アメリカ産 / オーストラリア産', note: 'USDAチョイス等級ミスジ＆バラ肉' },
+          { ingredient: '豚肉 (Pork)', origin: '韓国国産 (済州)', note: '済州産無抗生物質生の肩ロース' },
+          { ingredient: '鶏肉 (Chicken)', origin: '韓国国産', note: '新鮮な冷蔵モモ肉' },
+          { ingredient: 'タラ (Fish)', origin: 'ロシア産 / 遠洋産', note: '天然タラの切り身' }
+        ]
       },
       de: {
         noticeKor: "HINWEIS",
@@ -616,13 +614,26 @@
         timeLeft: "Restzeit:",
         visits: "Besuche:",
         revisits: "Wiederholungen:",
-        holidayBtn: "Feiertagsgrüße",
-        holidayHeader: "SCHÖNE FEIERTAGEN",
-        holidayTitle: "Frohes Chuseok-Fest!",
-        holidayDesc: "Vielen Dank für Ihren Besuch beim TacoTaco Foodtruck während der Feiertage. Genießen Sie leckere Tacos!",
         thIngredient: "Zutat",
         thOrigin: "Herkunft",
-        thNotes: "Hinweise"
+        thNotes: "Hinweise",
+        hideNotice: "Heute nicht mehr anzeigen",
+        editNoticeBtn: "✏️ Bearbeiten",
+        closeBtn: "Schließen",
+        stockLeftText: " übrig",
+        spots: ["Hongdae", "Palast", "Namsan", "Gangnam", "Yeouido"],
+        menuItems: [
+          { name: 'Carne Asada Taco', krName: 'Gegrillter Rindfleisch-Taco', price: '₩ 4,500', desc: 'Gegrilltes Rindfleisch, Koriander, Zwiebeln, grüne Salsa', stock: 6, icon: '🥩' },
+          { name: 'Birria Quesa Taco', krName: 'Käse & Rind-Taco', price: '₩ 5,000', desc: 'Geschmortes Rindfleisch, geschmolzener Oaxaca-Käse, Consommé', stock: 18, icon: '🧀' },
+          { name: 'Al Pastor Taco', krName: 'Gewürztes Schweinefleisch', price: '₩ 4,500', desc: 'Mexikanisch gewürztes Schweinefleisch, Ananas, rote Salsa', stock: 24, icon: '🍍' },
+          { name: 'Baja Fish Taco', krName: 'Knuspriger Fisch-Taco', price: '₩ 5,000', desc: 'In Bierteig frittierter Kabeljau, Chipotle-Creme, Krautsalat', stock: 3, icon: '🐟' }
+        ],
+        originData: [
+          { ingredient: 'Rindfleisch', origin: 'USA / Australien', note: 'USDA Choice Rinderbrust' },
+          { ingredient: 'Schweinefleisch', origin: 'Inland (Jeju)', note: 'Antibiotikafreier Schweinekamm' },
+          { ingredient: 'Hähnchen', origin: 'Inland (Korea)', note: 'Frisches entbeintes Keulenfleisch' },
+          { ingredient: 'Dorsch / Kabeljau', origin: 'Russland / Tiefsee', note: 'Wildfang-Kabeljaufilet' }
+        ]
       },
       it: {
         noticeKor: "AVVISO",
@@ -636,13 +647,26 @@
         timeLeft: "Rimanente:",
         visits: "Visite:",
         revisits: "Rivisite:",
-        holidayBtn: "Auguri di Festa",
-        holidayHeader: "BUONE FESTE",
-        holidayTitle: "Buone Feste di Chuseok!",
-        holidayDesc: "Grazie per aver visitato il food truck TacoTaco durante queste feste. Gustatevi deliziosi taco!",
         thIngredient: "Ingrediente",
         thOrigin: "Origine",
-        thNotes: "Note"
+        thNotes: "Note",
+        hideNotice: "Non mostrare più oggi",
+        editNoticeBtn: "✏️ Modifica",
+        closeBtn: "Chiudi",
+        stockLeftText: " rimasti",
+        spots: ["Hongdae", "Palazzo", "Namsan", "Gangnam", "Yeouido"],
+        menuItems: [
+          { name: 'Carne Asada Taco', krName: 'Taco con Manzo Grigliato', price: '₩ 4,500', desc: 'Manzo grigliato, coriandolo, cipolle, salsa verde', stock: 6, icon: '🥩' },
+          { name: 'Birria Quesa Taco', krName: 'Taco Formaggio e Manzo', price: '₩ 5,000', desc: 'Manzo stufato, formaggio Oaxaca fuso, consommé', stock: 18, icon: '🧀' },
+          { name: 'Al Pastor Taco', krName: 'Taco Maiale Speziato', price: '₩ 4,500', desc: 'Maiale marinato, ananas grigliato, salsa rossa', stock: 24, icon: '🍍' },
+          { name: 'Baja Fish Taco', krName: 'Taco di Pesce Croccante', price: '₩ 5,000', desc: 'Merluzzo fritto in Pastella, crema di chipotle, cavolo', stock: 3, icon: '🐟' }
+        ],
+        originData: [
+          { ingredient: 'Carne di Manzo', origin: 'USA / Australia', note: 'Taglio USDA Choice' },
+          { ingredient: 'Carne di Maiale', origin: 'Nazionale (Jeju)', note: 'Coppa di maiale fresca' },
+          { ingredient: 'Pollo', origin: 'Nazionale (Corea)', note: 'Coscia di pollo disossata fresca' },
+          { ingredient: 'Merluzzo', origin: 'Russia / Mare Aperto', note: 'Filetto di merluzzo selvatico' }
+        ]
       }
     };
 
@@ -666,18 +690,32 @@
       document.getElementById('lblRevisits').innerText = t.revisits;
       document.getElementById('lblVisitsMobile').innerText = t.visits;
       document.getElementById('lblRevisitsMobile').innerText = t.revisits;
-      document.getElementById('btnHolidayToggle').innerText = t.holidayBtn;
-      
-      document.getElementById('holidayModalHeader').innerText = t.holidayHeader;
-      document.getElementById('holidayGreetingTitle').innerText = t.holidayTitle;
-      document.getElementById('holidayGreetingDesc').innerHTML = t.holidayDesc;
+
+      document.getElementById('lblNoticeHide').innerText = t.hideNotice;
+      document.getElementById('lblNoticeHideMobile').innerText = t.hideNotice;
+      document.getElementById('btnEditNotice').innerText = t.editNoticeBtn;
+      document.getElementById('btnEditNoticeMobile').innerText = t.editNoticeBtn;
+      document.getElementById('btnCloseNotice').innerText = t.closeBtn;
+      document.getElementById('btnCloseNoticeMobile').innerText = t.closeBtn;
 
       document.getElementById('thIngredient').innerText = t.thIngredient;
       document.getElementById('thOrigin').innerText = t.thOrigin;
       document.getElementById('thNotes').innerText = t.thNotes;
 
+      // Update spot button titles
+      for (let i = 0; i < 5; i++) {
+        if (t.spots && t.spots[i]) {
+          const btnDesktop = document.getElementById(`spotBtn${i}`);
+          const btnMobile = document.getElementById(`spotBtnMobile${i}`);
+          if (btnDesktop) btnDesktop.innerText = t.spots[i];
+          if (btnMobile) btnMobile.innerText = t.spots[i];
+        }
+      }
+
       document.getElementById('langSelectMobile').value = lang;
       document.getElementById('langSelectDesktop').value = lang;
+
+      renderMenu();
     }
 
     // 2. VISITOR TRACKER
@@ -801,12 +839,7 @@
       }
     }
 
-    // 5. HOLIDAY MODAL SYSTEM
-    function toggleHolidayModal(show) {
-      document.getElementById('holidayModal').classList.toggle('hidden', !show);
-    }
-
-    // 6. WEATHER ENGINE
+    // 5. WEATHER ENGINE
     let activePrecipitationType = null;
     async function fetchSeoulLiveWeather() {
       try {
@@ -880,34 +913,23 @@
     }
 
     function applyDayNightMapFilter(isDay) {
-  const mapTileElement = document.querySelector('.leaflet-tile-pane');
-  if (!mapTileElement) return;
+      const mapTileElement = document.querySelector('.leaflet-tile-pane');
+      if (!mapTileElement) return;
 
-  if (isDay === 1) {
-    // Normal bright daytime map
-    mapTileElement.style.filter = 'brightness(100%) contrast(100%)';
-  } else {
-    // Dark mode map for nighttime
-    mapTileElement.style.filter = 'brightness(65%) contrast(125%) hue-rotate(180deg) invert(80%)';
-  }
-}
+      if (isDay === 1) {
+        mapTileElement.style.filter = 'brightness(100%) contrast(100%)';
+      } else {
+        mapTileElement.style.filter = 'brightness(65%) contrast(125%) hue-rotate(180deg) invert(80%)';
+      }
+    }
 
-    // 7. MENU MODAL SYSTEM
-    const menuItems = [
-      { name: 'Carne Asada Taco', krName: '카르네 아사다 타코', price: '₩ 4,500', desc: '직화로 구운 부채살, 고수, 다진 양파, 살사 베르데', stock: 6, icon: '🥩' },
-      { name: 'Birria Quesa Taco', krName: '비리아 퀘사 타코', price: '₩ 5,000', desc: '푹 삶은 우삼겹, 듬뿍 넣은 와하카 치즈, 비리아 콘소메 스튜', stock: 18, icon: '🧀' },
-      { name: 'Al Pastor Taco', krName: '알 파스토르 타코', price: '₩ 4,500', desc: '멕시칸 양념 돼지고기, 구운 파인애플, 살사 로하', stock: 24, icon: '🍍' },
-      { name: 'Baja Fish Taco', krName: '바하 피쉬 타코', price: '₩ 5,000', desc: '바삭한 맥주 튀김 옷을 입힌 대구살, 치폴레 크레마, 양배추 슬로', stock: 3, icon: '🐟' }
-    ];
-
-    const originData = [
-      { ingredient: '소고기 (Beef)', origin: '미국산 / 호주산', note: 'USDA 차이스 등급 부채살 및 양지' },
-      { ingredient: '돼지고기 (Pork)', origin: '국내산 (Jeju)', note: '제주산 무항생제 생목살' },
-      { ingredient: '닭고기 (Chicken)', origin: '국내산', note: '신선 냉장 정육 다리살' },
-      { ingredient: '대구 (Fish)', origin: '러시아산 / 원양산', note: '자연산 대구 순살 필렛' }
-    ];
-
+    // 6. DYNAMICALLY TRANSLATED MENU & ORIGIN RENDERER
     function renderMenu() {
+      const t = translations[currentLang] || translations.ko;
+      const menuItems = t.menuItems;
+      const originData = t.originData;
+      const stockText = t.stockLeftText || "개 남음";
+
       document.getElementById('menuGrid').innerHTML = menuItems.map(item => `
         <div class="border-2 border-black bg-white p-3 flex flex-col justify-between shadow-[2px_2px_0_0_#000]">
           <div>
@@ -921,8 +943,8 @@
             <p class="text-xs text-gray-700 mb-2 leading-relaxed font-medium">${item.desc}</p>
           </div>
           <div class="flex items-center justify-between border-t border-black pt-2 text-xs">
-            <span class="text-gray-800 font-bold">남은 수량:</span>
-            <span class="font-bold ${item.stock <= 8 ? 'text-red-600 animate-pulse' : 'text-emerald-700'}">${item.stock}개 남음</span>
+            <span class="text-gray-800 font-bold">Stock:</span>
+            <span class="font-bold ${item.stock <= 8 ? 'text-red-600 animate-pulse' : 'text-emerald-700'}">${item.stock}${stockText}</span>
           </div>
         </div>
       `).join('');
@@ -948,17 +970,14 @@
     function changePage(delta) {
       currentPage = Math.max(1, Math.min(2, currentPage + delta));
 
-      // 페이지 보이기/숨기기
       const page1 = document.getElementById('page1');
       const page2 = document.getElementById('page2');
       if (page1) page1.classList.toggle('hidden', currentPage !== 1);
       if (page2) page2.classList.toggle('hidden', currentPage !== 2);
       
-      // 페이지 표시 업데이트
       const indicator = document.getElementById('pageIndicator');
       if (indicator) indicator.innerText = `PG ${currentPage} / 2`;
 
-      // 이전(PREV) 버튼 상태 업데이트
       const prevBtn = document.getElementById('prevBtn');
       if (prevBtn) {
         const isFirst = (currentPage === 1);
@@ -968,7 +987,6 @@
         prevBtn.classList.toggle('cursor-pointer', !isFirst);
       }
 
-      // 다음(NEXT) 버튼 상태 업데이트
       const nextBtn = document.getElementById('nextBtn');
       if (nextBtn) {
         const isLast = (currentPage === 2);
@@ -983,14 +1001,8 @@
     checkNoticeExpiration();
     trackVisitors();
     fetchSeoulLiveWeather();
-    renderMenu();
     renderPrecipitation();
     changeLanguage('ko');
-
-    // Show holiday modal on initial load
-    setTimeout(() => {
-      toggleHolidayModal(true);
-    }, 1000);
   </script>
 </body>
 </html>
