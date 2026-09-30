@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>TacoTaco - Seoul Live GPS & Pixel Food Truck</title>
+  <title>TacoTaco - Realtime Pixel Food Truck</title>
   
-  <!-- Leaflet CSS for Real Map Engine -->
+  <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
   <!-- Typography: Press Start 2P & JetBrains Mono -->
@@ -20,10 +20,6 @@
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <style>
-    :root {
-      --app-height: 100dvh;
-    }
-
     * {
       font-family: 'JetBrains Mono', monospace;
       user-select: none;
@@ -32,35 +28,40 @@
       box-sizing: border-box;
     }
 
-    body, html {
+    /* 창을 극단적으로 줄여도 550px 밑으로는 안 줄어들고 스크롤바가 생기도록 방어 */
+    html, body {
       width: 100%;
       height: 100%;
-      height: var(--app-height);
+      min-width: 360px;
+      min-height: 550px;
       margin: 0;
       padding: 0;
-      overflow: hidden;
+      overflow: auto !important;
       background-color: #0f172a;
       touch-action: manipulation;
+    }
+
+    #app-root {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      min-width: 360px;
+      min-height: 550px;
+      overflow: hidden;
     }
 
     .font-arcade {
       font-family: 'Press Start 2P', cursive, monospace;
     }
 
-    /* Core Pixelated Map Filter */
+    /* Map Pixelated Filter */
     .pixelated-map .leaflet-tile-container img {
       image-rendering: pixelated !important;
       image-rendering: crisp-edges !important;
-      filter: contrast(125%) saturate(155%) hue-rotate(-5deg);
+      filter: contrast(120%) saturate(140%);
     }
 
-    .pixelated-map .leaflet-container {
-      background: #1e293b;
-      width: 100%;
-      height: 100%;
-    }
-
-    /* Vibrant Chunky Retro Arcade Glass Box */
+    /* Vibrant Chunky Retro Arcade Box */
     .pixel-box-vibrant {
       background: rgba(255, 251, 232, 0.96);
       border: clamp(2px, 0.8vw, 4px) solid #000;
@@ -79,6 +80,7 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
+      cursor: pointer;
     }
     .pixel-btn:active {
       transform: translate(2px, 2px) !important;
@@ -89,11 +91,6 @@
       background: #ff5964;
       color: #ffffff;
       box-shadow: inset -2px -2px 0px 0px #b81d28, inset 2px 2px 0px 0px #ff9aa2, 3px 3px 0 0 #000;
-      transition: all 0.05s ease;
-    }
-    .pixel-btn-sun:active {
-      transform: translate(2px, 2px);
-      box-shadow: inset 2px 2px 0px 0px #b81d28, 1px 1px 0 0 #000;
     }
 
     .pixel-btn-sky {
@@ -101,6 +98,13 @@
       color: #ffffff;
       border: 2px solid #000;
       box-shadow: inset -2px -2px 0px 0px #0066b8, inset 2px 2px 0px 0px #85ccff, 2px 2px 0 0 #000;
+    }
+
+    .pixel-btn-emerald {
+      background: #10b981;
+      color: #ffffff;
+      border: 2px solid #000;
+      box-shadow: inset -2px -2px 0px 0px #047857, inset 2px 2px 0px 0px #6ee7b7, 2px 2px 0 0 #000;
     }
 
     /* CRT Scanline Overlay */
@@ -119,7 +123,7 @@
       border-radius: 2px;
     }
 
-    .pixel-scroll::-webkit-scrollbar { width: 10px; }
+    .pixel-scroll::-webkit-scrollbar { width: 8px; }
     .pixel-scroll::-webkit-scrollbar-track { background: #ffeaa7; border-left: 2px solid #000; }
     .pixel-scroll::-webkit-scrollbar-thumb { background: #ff5964; border: 2px solid #000; }
 
@@ -169,276 +173,348 @@
       line-height: 1;
       filter: drop-shadow(0px 4px 0px rgba(0,0,0,0.7));
     }
+
+    .speech-bubble {
+      background: #fff;
+      border: 2px solid #000;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: bold;
+      box-shadow: 2px 2px 0px #000;
+      animation: bounce 2s infinite;
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-3px); }
+    }
   </style>
 </head>
-<body class="bg-[#0f172a] text-black overflow-hidden w-screen h-screen relative select-none">
+<body class="bg-[#0f172a] text-black select-none">
 
-  <!-- Map Container -->
-  <div id="map" class="absolute inset-0 w-full h-full pixelated-map z-0"></div>
+  <!-- ROOT CONTAINER FOR STRICT MIN-SIZE GUARANTEE -->
+  <div id="app-root">
 
-  <!-- CRT Overlay & Weather Canvas -->
-  <div class="scanlines fixed inset-0 z-10"></div>
-  <div id="weatherVignette" class="weather-vignette fixed inset-0 z-20"></div>
-  <canvas id="precipCanvas" class="fixed inset-0 z-20 pointer-events-none"></canvas>
+    <!-- Map Container -->
+    <div id="map" class="absolute inset-0 w-full h-full pixelated-map z-0"></div>
 
-  <!-- TOP CENTER NOTICE BADGE -->
-  <div id="noticeContainer" class="fixed top-3 left-1/2 -translate-x-1/2 z-40 pointer-events-auto flex flex-col items-center">
-    <button id="noticeBadgeBtn" onclick="handleNoticeClick()" class="pixel-box-vibrant px-4 py-2 flex items-center gap-2.5 cursor-pointer hover:scale-105 transition-transform bg-[#ffd166]">
-      <span class="w-3 h-3 rounded-full bg-emerald-500 animate-ping inline-block shrink-0"></span>
-      <span class="font-bold text-sm sm:text-base text-black tracking-tight flex items-center gap-1.5">
-        📢 <span id="noticeBadgeTextKorean" class="font-black text-black text-base sm:text-lg">공지!</span>
-        <span id="noticeBadgeTextEnglish" class="font-arcade text-xs sm:text-sm text-red-600 ml-0.5">NOTICE</span>
-      </span>
-    </button>
+    <!-- CRT Overlay & Weather Canvas -->
+    <div class="scanlines absolute inset-0 z-10 pointer-events-none"></div>
+    <div id="weatherVignette" class="weather-vignette absolute inset-0 z-20 pointer-events-none"></div>
+    <canvas id="precipCanvas" class="absolute inset-0 z-20 pointer-events-none"></canvas>
 
-    <!-- Desktop Center Notice Dropdown Panel -->
-    <div id="desktopNoticePanel" class="hidden mt-2 w-80 sm:w-96 pixel-box-vibrant p-3.5 bg-amber-50 shadow-2xl border-3 border-black">
-      <div class="flex items-center justify-between border-b-2 border-black pb-1.5 mb-2">
-        <span class="font-bold text-sm text-red-600 flex items-center gap-1.5">
-          📢 <span id="noticePanelTitle">공지사항 (NOTICE)</span>
-        </span>
-        <button onclick="toggleDesktopNotice(false)" class="text-xs font-bold px-2 py-0.5 bg-red-500 hover:bg-red-600 border-2 border-black text-white cursor-pointer shadow-[1px_1px_0_0_#000]">X</button>
-      </div>
-      <p id="noticeContentText" class="text-xs text-gray-900 font-bold leading-relaxed whitespace-pre-line">
-        🌮 [오늘의 스팟] 홍대입구역 9번 출구 앞 정상 영업 중!
-        🔥 인기 메뉴 '비리아 퀘사 타코' 조기 품절될 수 있습니다.
-      </p>
-      
-      <!-- Footer with "오늘 하루 동안 보지 않기" Checkbox -->
-      <div class="mt-3 border-t border-black/20 pt-2 flex items-center justify-between">
-        <label class="flex items-center gap-1.5 text-[11px] font-bold text-gray-800 cursor-pointer select-none">
-          <input type="checkbox" onchange="dismissNoticeForToday(this.checked)" class="w-3.5 h-3.5 accent-red-600 border-2 border-black cursor-pointer">
-          <span id="lblNoticeHide">오늘 하루 동안 보지 않기</span>
-        </label>
+    <!-- ADMIN AUTH MODAL (CUSTOM PIXEL THEME) -->
+    <div id="adminAuthModal" class="hidden absolute inset-0 bg-black/75 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+      <div class="pixel-box-vibrant w-full max-w-xs p-4 bg-amber-50 flex flex-col gap-3 shadow-2xl border-4 border-black">
+        <div class="flex items-center justify-between border-b-2 border-black pb-2">
+          <h3 class="font-bold text-xs sm:text-sm text-black flex items-center gap-1.5 font-arcade">
+            👨‍🍳 <span id="adminModalTitle">ADMIN ACCESS</span>
+          </h3>
+          <button onclick="closeAdminAuthModal()" class="pixel-btn-sun px-2 py-0.5 text-xs font-bold cursor-pointer">X</button>
+        </div>
 
-        <div class="flex gap-1.5">
-          <button onclick="editNotice()" class="text-[10px] bg-sky-200 border border-black px-2 py-1 font-bold hover:bg-sky-300" id="btnEditNotice">✏️ 수정</button>
-          <button onclick="toggleDesktopNotice(false)" class="text-[10px] bg-amber-200 border border-black px-2 py-1 font-bold hover:bg-amber-300" id="btnCloseNotice">닫기</button>
+        <div class="space-y-2">
+          <p class="text-xs text-gray-800 font-bold leading-tight" id="adminModalDesc">
+            사장님 전용 관리자 모드 비밀번호를 입력해주세요.
+          </p>
+          <div class="relative">
+            <input type="password" id="adminPasswordInput" placeholder="Passcode (기본: 1234)" 
+                   class="w-full bg-white border-2 border-black p-2 text-xs font-bold text-black focus:outline-none focus:bg-amber-100 shadow-[inset_2px_2px_0_0_#000]">
+          </div>
+          <p id="adminAuthError" class="text-[10px] text-red-600 font-bold hidden">⚠️ 비밀번호가 일치하지 않습니다.</p>
+        </div>
+
+        <div class="flex gap-2 pt-1">
+          <button onclick="closeAdminAuthModal()" class="pixel-btn bg-gray-300 text-black w-1/2 py-1.5 text-xs font-bold border-2 border-black shadow-[2px_2px_0_0_#000]">취소</button>
+          <button onclick="submitAdminAuth()" class="pixel-btn-emerald w-1/2 py-1.5 text-xs font-bold text-white shadow-[2px_2px_0_0_#000]">확인</button>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- MOBILE COMPACT HEADER (< 640px) -->
-  <div class="sm:hidden fixed top-2 left-2 right-2 z-30 flex items-center justify-between gap-1 pointer-events-auto">
-    <div class="pixel-box-vibrant px-2 py-1 flex items-center gap-1.5 flex-1 min-w-0">
-      <span id="weatherIconMobile" class="text-sm">📡</span>
-      <div class="flex flex-col min-w-0">
-        <span id="seoulSpotBadgeMobile" class="font-bold text-[10px] truncate text-black leading-tight">HONGDAE</span>
-        <span id="tempDisplayMobile" class="text-[9px] text-gray-700 font-medium leading-tight">--°C</span>
-      </div>
-    </div>
-
-    <!-- Language Selector Mobile -->
-    <select id="langSelectMobile" onchange="changeLanguage(this.value)" class="bg-amber-300 border-2 border-black text-[10px] font-bold p-1">
-      <option value="ko">🇰🇷 한국어</option>
-      <option value="en">🇺🇸 English</option>
-      <option value="fr">🇫🇷 Français</option>
-      <option value="es">🇪🇸 Español</option>
-      <option value="ja">🇯🇵 日本語</option>
-      <option value="de">🇩🇪 Deutsch</option>
-      <option value="it">🇮🇹 Italiano</option>
-    </select>
-
-    <button onclick="toggleMenu(true)" class="pixel-btn-sun px-2.5 py-1.5 flex items-center gap-1 font-arcade text-[8px] border-2 border-black shrink-0">
-      <span>🌮</span>
-      <span id="menuBtnTextMobile">MENU</span>
-    </button>
-  </div>
-
-  <!-- DESKTOP TOP-LEFT HUD (>= 640px) -->
-  <div class="hidden sm:flex fixed top-4 left-4 z-30 pointer-events-auto flex-col gap-2">
-    <div class="pixel-box-vibrant p-3 max-w-xs flex flex-col gap-2">
-      <div class="flex items-center justify-between border-b-2 border-black pb-1.5">
-        <span class="font-arcade text-[9px] text-black flex items-center gap-1">
-          <i data-lucide="map" class="w-3.5 h-3.5 text-red-600"></i> SEOUL GPS
-        </span>
-        <span id="seoulSpotBadge" class="bg-amber-400 text-black px-2 py-0.5 text-[9px] font-arcade border border-black font-bold">
-          HONGDAE
-        </span>
-      </div>
-
-      <div class="flex items-center justify-between text-xs pt-0.5">
-        <span class="font-bold text-gray-800 flex items-center gap-1.5">
-          <span id="weatherIconDisplay">📡</span> <span id="lblWeather">날씨:</span>
-        </span>
-        <span id="weatherStatusText" class="font-bold text-emerald-700 text-xs">SYNCING...</span>
-      </div>
-
-      <div class="text-xs text-gray-700 flex justify-between items-center border-t border-gray-300 pt-1.5 mt-0.5">
-        <span><span id="lblTemp">온도:</span> <strong id="tempDisplay" class="text-black font-bold">--°C</strong></span>
+    <!-- CENTER POPUP MODAL WINDOW FOR NOTICE -->
+    <div id="desktopNoticeModalOverlay" class="hidden absolute inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+      <div id="desktopNoticePanel" class="w-[90vw] max-w-sm sm:w-96 pixel-box-vibrant p-4 bg-amber-50 shadow-2xl border-3 border-black">
+        <div class="flex items-center justify-between border-b-2 border-black pb-2 mb-2.5">
+          <span class="font-bold text-sm text-red-600 flex items-center gap-1.5">
+            📢 <span id="noticePanelTitle">공지사항 (NOTICE)</span>
+          </span>
+          <button onclick="toggleDesktopNotice(false)" class="text-xs font-bold px-2 py-0.5 bg-red-500 hover:bg-red-600 border-2 border-black text-white cursor-pointer shadow-[1px_1px_0_0_#000]">X</button>
+        </div>
+        <p id="noticeContentText" class="text-xs text-gray-900 font-bold leading-relaxed whitespace-pre-line">
+          🌮 [오늘의 스폿] 홍대입구역 9번 출구 앞 정상 영업 중!
+          🔥 인기 메뉴 '비리아 퀘사 타코' 조기 품절될 수 있습니다.
+        </p>
         
-        <!-- Language Selector Desktop -->
-        <select id="langSelectDesktop" onchange="changeLanguage(this.value)" class="bg-amber-200 border border-black text-xs font-bold px-1.5 py-0.5">
-          <option value="ko">🌐 한국어</option>
-          <option value="en">🌐 English</option>
-          <option value="fr">🌐 Français</option>
-          <option value="es">🌐 Español</option>
-          <option value="ja">🌐 日本語</option>
-          <option value="de">🌐 Deutsch</option>
-          <option value="it">🌐 Italiano</option>
-        </select>
-      </div>
-    </div>
+        <div class="mt-4 border-t border-black/20 pt-2.5 flex items-center justify-between">
+          <label class="flex items-center gap-1.5 text-[11px] font-bold text-gray-800 cursor-pointer select-none">
+            <input type="checkbox" onchange="dismissNoticeForToday(this.checked)" class="w-3.5 h-3.5 accent-red-600 border-2 border-black cursor-pointer">
+            <span id="lblNoticeHide">오늘 하루 동안 보지 않기</span>
+          </label>
 
-    <!-- Location Jump Buttons & Visitor Stats -->
-    <div class="pixel-box-vibrant p-2 flex flex-col gap-1.5 max-w-xs">
-      <span class="font-bold text-[10px] text-gray-800" id="lblSeoulSpots">📍 스팟 이동 (SEOUL SPOTS):</span>
-      <div class="flex flex-wrap gap-1">
-        <button onclick="moveToSpot(0)" class="location-btn bg-orange-100 text-black" id="spotBtn0">홍대</button>
-        <button onclick="moveToSpot(1)" class="location-btn bg-red-100 text-black" id="spotBtn1">경복궁</button>
-        <button onclick="moveToSpot(2)" class="location-btn bg-green-100 text-black" id="spotBtn2">남산</button>
-        <button onclick="moveToSpot(3)" class="location-btn bg-blue-100 text-black" id="spotBtn3">강남</button>
-        <button onclick="moveToSpot(4)" class="location-btn bg-purple-100 text-black" id="spotBtn4">여의도</button>
-      </div>
-
-      <!-- Visitor Counter Stats -->
-      <div class="border-t border-black pt-1.5 mt-1 flex items-center justify-between text-[11px] font-bold">
-        <span class="text-gray-700">👀 <span id="lblVisits">방문자:</span> <strong id="totalVisitsCount" class="text-blue-600">--</strong></span>
-        <span class="text-gray-700">🔄 <span id="lblRevisits">재방문:</span> <strong id="revisitsCount" class="text-emerald-600">--</strong></span>
-      </div>
-    </div>
-  </div>
-
-  <!-- DESKTOP TOP-RIGHT HUD (>= 640px) -->
-  <div class="hidden sm:flex fixed top-4 right-4 z-30 flex-col items-end gap-3 max-w-xs sm:max-w-sm pointer-events-auto">
-    <div class="pixel-box-vibrant p-3.5 w-full text-xs text-black flex flex-col gap-2.5">
-      <div class="flex items-center justify-between border-b-2 border-black pb-2 px-1">
-        <span class="flex items-center gap-2 font-arcade text-[10px] text-emerald-700 font-bold">
-          <span class="inline-block w-2.5 h-2.5 bg-emerald-500 rounded-none animate-ping"></span>
-          LIVE TRACKER
-        </span>
-        <span class="bg-[#ff5964] text-white px-2.5 py-1 text-[9px] font-arcade tracking-wider border-2 border-black shadow-[2px_2px_0_0_#000] ml-6">
-          COOKING 🌮
-        </span>
-      </div>
-      
-      <div class="flex items-center justify-between text-xs pt-0.5">
-        <span class="flex items-center gap-1.5 font-bold text-gray-700">
-          <i data-lucide="map-pin" class="w-4 h-4 text-red-600"></i>
-          <span id="lblCurrentLoc">현재 위치:</span>
-        </span>
-        <span id="locationName" class="text-black font-bold truncate max-w-[180px]">Hongdae St. Exit 9</span>
-      </div>
-
-      <div class="flex items-center justify-between bg-[#ffeaa7] p-2 border-2 border-black shadow-[2px_2px_0_0_#000]">
-        <span class="text-xs text-black font-bold flex items-center gap-1">
-          <i data-lucide="clock" class="w-3.5 h-3.5 text-red-600"></i> <span id="lblTimeLeft">남은 시간:</span>
-        </span>
-        <span id="countdownTimer" class="font-arcade text-red-600 text-xs tracking-widest font-bold">01:42:19</span>
-      </div>
-    </div>
-
-    <button onclick="toggleMenu(true)" class="pixel-btn-sun px-4 py-3 rounded-none flex items-center gap-2.5 font-arcade text-xs border-2 border-black cursor-pointer group">
-      <span class="text-xl group-hover:scale-125 transition-transform">🌮</span>
-      <span class="tracking-wider text-white" id="btnOpenMenu">OPEN MENU</span>
-    </button>
-  </div>
-
-  <!-- MOBILE BOTTOM DRAWER HUD (< 640px) -->
-  <div class="sm:hidden fixed bottom-3 left-2 right-2 z-30 pointer-events-auto flex flex-col gap-2">
-    <div class="pixel-box-vibrant p-2.5 flex flex-col gap-2">
-      <div class="flex items-center justify-between text-xs border-b-2 border-black pb-2">
-        <div class="flex items-center gap-1 min-w-0 font-bold text-black">
-          <i data-lucide="map-pin" class="w-4 h-4 text-red-600 shrink-0"></i>
-          <span id="locationNameMobile" class="truncate text-[12px]">Hongdae St. Exit 9</span>
-        </div>
-        <span id="countdownTimerMobile" class="font-arcade text-red-600 text-[10px] shrink-0 font-bold bg-amber-100 px-1.5 py-0.5 border border-black">01:42:19</span>
-      </div>
-
-      <div class="flex items-center justify-between text-[10px] font-bold">
-        <span>👀 <span id="lblVisitsMobile">방문:</span> <strong id="totalVisitsCountMobile" class="text-blue-600">--</strong></span>
-        <span>🔄 <span id="lblRevisitsMobile">재방문:</span> <strong id="revisitsCountMobile" class="text-emerald-600">--</strong></span>
-      </div>
-
-      <div class="flex items-center gap-1 overflow-x-auto pixel-scroll pb-1">
-        <button onclick="moveToSpot(0)" class="location-btn bg-orange-100 text-black shrink-0" id="spotBtnMobile0">홍대</button>
-        <button onclick="moveToSpot(1)" class="location-btn bg-red-100 text-black shrink-0" id="spotBtnMobile1">경복궁</button>
-        <button onclick="moveToSpot(2)" class="location-btn bg-green-100 text-black shrink-0" id="spotBtnMobile2">남산</button>
-        <button onclick="moveToSpot(3)" class="location-btn bg-blue-100 text-black shrink-0" id="spotBtnMobile3">강남</button>
-        <button onclick="moveToSpot(4)" class="location-btn bg-purple-100 text-black shrink-0" id="spotBtnMobile4">여의도</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- MOBILE NOTICE MODAL -->
-  <div id="noticeModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-sm p-4 hidden">
-    <div class="pixel-box-vibrant w-full max-w-md p-4 bg-amber-50">
-      <div class="flex items-center justify-between border-b-2 border-black pb-2 mb-3">
-        <h3 class="font-bold text-sm text-red-600 flex items-center gap-1.5">
-          📢 <span id="noticeModalTitle">공지사항 (NOTICE)</span>
-        </h3>
-        <button onclick="toggleMobileNotice(false)" class="pixel-btn-sun px-2 py-0.5 text-xs font-bold cursor-pointer">X</button>
-      </div>
-      <p id="noticeModalContent" class="text-xs text-gray-900 font-bold leading-relaxed whitespace-pre-line mb-4">
-        🌮 [오늘의 스팟] 홍대입구역 9번 출구 앞 정상 영업 중!
-        🔥 인기 메뉴 '비리아 퀘사 타코' 조기 품절될 수 있습니다.
-      </p>
-      
-      <div class="mt-3 border-t border-black/20 pt-2 flex items-center justify-between">
-        <label class="flex items-center gap-1.5 text-[11px] font-bold text-gray-800 cursor-pointer select-none">
-          <input type="checkbox" onchange="dismissNoticeForToday(this.checked)" class="w-3.5 h-3.5 accent-red-600 border-2 border-black cursor-pointer">
-          <span id="lblNoticeHideMobile">오늘 하루 동안 보지 않기</span>
-        </label>
-
-        <div class="flex gap-1.5">
-          <button onclick="editNotice()" class="pixel-btn-sky px-3 py-1 text-xs font-bold cursor-pointer" id="btnEditNoticeMobile">✏️ 수정</button>
-          <button onclick="toggleMobileNotice(false)" class="pixel-btn-sun px-3 py-1 text-xs font-bold cursor-pointer" id="btnCloseNoticeMobile">닫기</button>
+          <div class="flex gap-1.5">
+            <button id="btnEditNotice" onclick="editNotice()" class="hidden text-[10px] bg-sky-200 border border-black px-2 py-1 font-bold hover:bg-sky-300">✏ 수정</button>
+            <button id="btnCloseNotice" onclick="toggleDesktopNotice(false)" class="text-[10px] bg-amber-200 border border-black px-2 py-1 font-bold hover:bg-amber-300">닫기</button>
+          </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- MENU MODAL -->
-  <div id="menuModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-sm p-3 sm:p-4 hidden">
-    <div class="pixel-box-vibrant w-full max-w-2xl max-h-[90vh] flex flex-col text-black relative">
-      <div class="bg-[#ffca3a] border-b-3 border-black p-3 sm:p-4 flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <span class="text-xl sm:text-2xl">🌮</span>
-          <h2 id="modalTitle" class="font-arcade text-black text-[10px] sm:text-xs tracking-wider">TACOTACO MENU [PAGE 1/2]</h2>
-        </div>
-        <button onclick="toggleMenu(false)" class="pixel-btn-sun px-2.5 py-1 text-xs font-arcade text-white cursor-pointer">X</button>
-      </div>
-
-      <!-- Page 1: Menu Items -->
-      <div id="page1" class="p-3 sm:p-4 overflow-y-auto pixel-scroll flex-1 space-y-3 bg-[#fffbe8]">
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="menuGrid"></div>
-      </div>
-
-      <!-- Page 2: Ingredient Origin Table -->
-      <div id="page2" class="p-3 sm:p-4 overflow-y-auto pixel-scroll flex-1 space-y-4 bg-[#fffbe8] hidden">
-        <div class="border-2 border-black bg-white p-1 shadow-[2px_2px_0_0_#000]">
-          <table class="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr class="bg-[#ffca3a] text-black border-b-2 border-black text-[10px] font-arcade">
-                <th class="p-2" id="thIngredient">재료 (Item)</th>
-                <th class="p-2" id="thOrigin">원산지 (Origin)</th>
-                <th class="p-2" id="thNotes">비고 (Notes)</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200" id="originTableBody"></tbody>
-          </table>
+    <!-- MOBILE COMPACT HEADER (< 640px) -->
+    <div class="sm:hidden absolute top-2 left-2 right-2 z-30 flex items-center justify-between gap-1 pointer-events-auto min-w-[340px]">
+      <div class="pixel-box-vibrant px-2 py-1 flex items-center gap-1.5 flex-1 min-w-0">
+        <span id="weatherIconMobile" class="text-sm">📡</span>
+        <div class="flex flex-col min-w-0">
+          <span id="seoulSpotBadgeMobile" class="font-bold text-[10px] truncate text-black leading-tight">HONGDAE</span>
+          <span id="tempDisplayMobile" class="text-[9px] text-gray-700 font-medium leading-tight">--°C</span>
         </div>
       </div>
 
-      <!-- Footer Nav -->
-      <div class="bg-[#ffca3a] border-t-3 border-black p-3 flex items-center justify-between">
-        <button id="prevBtn" onclick="changePage(-1)" disabled class="pixel-btn-sky opacity-50 px-3 py-1.5 text-[10px] font-arcade cursor-not-allowed">◀ PREV</button>
-        <div class="text-xs font-bold text-black font-arcade" id="pageIndicator">PG 1 / 2</div>
-        <button id="nextBtn" onclick="changePage(1)" class="pixel-btn-sky px-3 py-1.5 text-[10px] font-arcade cursor-pointer">NEXT ➔</button>
+      <select id="langSelectMobile" onchange="changeLanguage(this.value)" class="bg-amber-300 border-2 border-black text-[10px] font-bold p-1">
+        <option value="ko">🇰🇷 한국어</option>
+        <option value="en">🇺🇸 English</option>
+        <option value="fr">🇫🇷 Français</option>
+        <option value="es">🇪🇸 Español</option>
+        <option value="ja">🇯🇵 日本語</option>
+        <option value="de">🇩🇪 Deutsch</option>
+        <option value="it">🇮🇹 Italiano</option>
+      </select>
+
+      <button onclick="toggleMenu(true)" class="pixel-btn-sun px-2.5 py-1.5 flex items-center gap-1 font-arcade text-[8px] border-2 border-black shrink-0">
+        <span>🌮</span>
+        <span id="menuBtnTextMobile">MENU</span>
+      </button>
+    </div>
+
+    <!-- DESKTOP TOP-LEFT HUD (>= 640px) -->
+    <div class="hidden sm:flex absolute top-4 left-4 z-30 pointer-events-auto flex-col gap-2">
+      <div class="pixel-box-vibrant p-3 max-w-xs flex flex-col gap-2">
+        <div class="flex items-center justify-between border-b-2 border-black pb-1.5">
+          <span class="font-arcade text-[9px] text-black flex items-center gap-1">
+            <i data-lucide="map" class="w-3.5 h-3.5 text-red-600"></i> SEOUL GPS
+          </span>
+          <span id="seoulSpotBadge" class="bg-amber-400 text-black px-2 py-0.5 text-[9px] font-arcade border border-black font-bold">
+            HONGDAE
+          </span>
+        </div>
+
+        <div class="flex items-center justify-between text-xs pt-0.5">
+          <span class="font-bold text-gray-800 flex items-center gap-1.5">
+            <span id="weatherIconDisplay">📡</span> <span id="lblWeather">날씨:</span>
+          </span>
+          <span id="weatherStatusText" class="font-bold text-emerald-700 text-xs">SYNCING...</span>
+        </div>
+
+        <div class="text-xs text-gray-700 flex justify-between items-center border-t border-gray-300 pt-1.5 mt-0.5">
+          <span><span id="lblTemp">온도:</span> <strong id="tempDisplay" class="text-black font-bold">--°C</strong></span>
+          
+          <select id="langSelectDesktop" onchange="changeLanguage(this.value)" class="bg-amber-200 border border-black text-xs font-bold px-1.5 py-0.5">
+            <option value="ko">🌐 한국어</option>
+            <option value="en">🌐 English</option>
+            <option value="fr">🌐 Français</option>
+            <option value="es">🌐 Español</option>
+            <option value="ja">🌐 日本語</option>
+            <option value="de">🇩🇪 Deutsch</option>
+            <option value="it">🇮🇹 Italiano</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="pixel-box-vibrant p-2 flex flex-col gap-1.5 max-w-xs">
+        <div class="flex justify-between items-center">
+          <span class="font-bold text-[10px] text-gray-800" id="lblSeoulSpots">📍 스팟 이동 (SEOUL SPOTS):</span>
+          <button onclick="toggleAdminMode()" class="text-[9px] bg-red-500 text-white border border-black px-1.5 py-0.5 font-bold hover:bg-red-600 shadow-[1px_1px_0_0_#000]">👨‍🍳 사장님</button>
+        </div>
+        <div class="flex flex-wrap gap-1">
+          <button onclick="moveToSpot(0)" class="location-btn bg-orange-100 text-black" id="spotBtn0">홍대</button>
+          <button onclick="moveToSpot(1)" class="location-btn bg-red-100 text-black" id="spotBtn1">경복궁</button>
+          <button onclick="moveToSpot(2)" class="location-btn bg-green-100 text-black" id="spotBtn2">남산</button>
+          <button onclick="moveToSpot(3)" class="location-btn bg-blue-100 text-black" id="spotBtn3">강남</button>
+          <button onclick="moveToSpot(4)" class="location-btn bg-purple-100 text-black" id="spotBtn4">여의도</button>
+        </div>
+
+        <div class="border-t border-black pt-1.5 mt-1 flex items-center justify-between text-[11px] font-bold">
+          <span class="text-gray-700">👀 <span id="lblVisits">방문자:</span> <strong id="totalVisitsCount" class="text-blue-600">--</strong></span>
+          <span class="text-gray-700">🔄 <span id="lblRevisits">재방문:</span> <strong id="revisitsCount" class="text-emerald-600">--</strong></span>
+        </div>
       </div>
     </div>
-  </div>
+
+    <!-- DESKTOP TOP-RIGHT HUD (>= 640px) -->
+    <div class="hidden sm:flex absolute top-4 right-4 z-30 flex-col items-end gap-3 max-w-xs sm:max-w-sm pointer-events-auto">
+      <div class="pixel-box-vibrant p-3.5 w-full text-xs text-black flex flex-col gap-2.5">
+        <div class="flex items-center justify-between border-b-2 border-black pb-2 px-1">
+          <span class="flex items-center gap-2 font-arcade text-[10px] text-emerald-700 font-bold" id="storeStatusBadge">
+            <span class="inline-block w-2.5 h-2.5 bg-emerald-500 rounded-none animate-ping"></span>
+            LIVE TRACKER
+          </span>
+          <span id="cookingBadge" class="bg-[#ff5964] text-white px-2.5 py-1 text-[9px] font-arcade tracking-wider border-2 border-black shadow-[2px_2px_0_0_#000] ml-6">
+            OPEN 🌮
+          </span>
+        </div>
+        
+        <div class="flex items-center justify-between text-xs pt-0.5">
+          <span class="flex items-center gap-1.5 font-bold text-gray-700">
+            <i data-lucide="map-pin" class="w-4 h-4 text-red-600"></i>
+            <span id="lblCurrentLoc">현재 위치:</span>
+          </span>
+          <span id="locationName" class="text-black font-bold truncate max-w-[180px]">Hongdae St. Exit 9</span>
+        </div>
+
+        <div class="flex items-center justify-between bg-[#ffeaa7] p-2 border-2 border-black shadow-[2px_2px_0_0_#000]">
+          <span class="text-xs text-black font-bold flex items-center gap-1">
+            <i data-lucide="clock" class="w-3.5 h-3.5 text-red-600"></i> <span id="lblTimeLeft">남은 시간:</span>
+          </span>
+          <span id="countdownTimer" class="font-arcade text-red-600 text-xs tracking-widest font-bold">01:42:19</span>
+        </div>
+      </div>
+
+      <button onclick="toggleMenu(true)" class="pixel-btn-sun px-4 py-3 rounded-none flex items-center gap-2.5 font-arcade text-xs border-2 border-black cursor-pointer group w-full justify-center">
+        <span class="text-xl group-hover:scale-125 transition-transform">🌮</span>
+        <span class="tracking-wider text-white" id="btnOpenMenu">OPEN MENU & ORDER</span>
+      </button>
+    </div>
+
+    <!-- TABLET/PC BOTTOM CENTER COMPONENT (>= 640px) -->
+    <div class="hidden sm:block absolute bottom-4 left-1/2 -translate-x-1/2 z-30 pointer-events-auto">
+      <div class="speech-bubble border-2 border-black bg-white shadow-[3px_3px_0_0_#000] text-center whitespace-nowrap px-4 py-2">
+        ⚡ <strong>현장 결제 가능!</strong> (카카오페이 / 계좌이체 / 현금 ok)
+      </div>
+    </div>
+
+    <!-- MOBILE BOTTOM DRAWER HUD (< 640px) -->
+    <div class="sm:hidden absolute bottom-3 left-2 right-2 z-30 pointer-events-auto flex flex-col gap-2 min-w-[340px]">
+      <div class="flex items-center justify-between gap-2">
+        <div class="speech-bubble text-center border-2 border-black shadow-[2px_2px_0_0_#000] flex-1">
+          ⚡ <strong>현장 결제 가능!</strong> (카카오페이/계좌이체/현금)
+        </div>
+      </div>
+
+      <div class="pixel-box-vibrant p-2.5 flex flex-col gap-2">
+        <div class="flex items-center justify-between text-xs border-b-2 border-black pb-2">
+          <div class="flex items-center gap-1 min-w-0 font-bold text-black">
+            <i data-lucide="map-pin" class="w-4 h-4 text-red-600 shrink-0"></i>
+            <span id="locationNameMobile" class="truncate text-[12px]">Hongdae St. Exit 9</span>
+          </div>
+          <span id="countdownTimerMobile" class="font-arcade text-red-600 text-[10px] shrink-0 font-bold bg-amber-100 px-1.5 py-0.5 border border-black">01:42:19</span>
+        </div>
+
+        <div class="flex items-center justify-between text-[10px] font-bold">
+          <span>👀 <span id="lblVisitsMobile">방문:</span> <strong id="totalVisitsCountMobile" class="text-blue-600">--</strong></span>
+          <button onclick="toggleAdminMode()" class="text-[9px] bg-red-500 text-white border border-black px-1.5 py-0.5 font-bold">👨‍🍳 사장님 설정</button>
+          <span>🔄 <span id="lblRevisitsMobile">재방문:</span> <strong id="revisitsCountMobile" class="text-emerald-600">--</strong></span>
+        </div>
+
+        <div class="flex items-center gap-1 overflow-x-auto pixel-scroll pb-1">
+          <button onclick="moveToSpot(0)" class="location-btn bg-orange-100 text-black shrink-0" id="spotBtnMobile0">홍대</button>
+          <button onclick="moveToSpot(1)" class="location-btn bg-red-100 text-black shrink-0" id="spotBtnMobile1">경복궁</button>
+          <button onclick="moveToSpot(2)" class="location-btn bg-green-100 text-black shrink-0" id="spotBtnMobile2">남산</button>
+          <button onclick="moveToSpot(3)" class="location-btn bg-blue-100 text-black shrink-0" id="spotBtnMobile3">강남</button>
+          <button onclick="moveToSpot(4)" class="location-btn bg-purple-100 text-black shrink-0" id="spotBtnMobile4">여의도</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MENU & ORDER MODAL -->
+    <div id="menuModal" class="absolute inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-sm p-3 sm:p-4 hidden">
+      <div class="pixel-box-vibrant w-full max-w-2xl max-h-[90vh] min-h-[480px] flex flex-col text-black relative">
+        <div class="bg-[#ffca3a] border-b-3 border-black p-3 sm:p-4 flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="text-xl sm:text-2xl shrink-0">🌮</span>
+            <h2 id="modalTitle" class="font-arcade text-black text-[10px] sm:text-xs tracking-wider truncate">TACOTACO MENU [PAGE 1/2]</h2>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <button onclick="toggleAdminMode()" class="text-[9px] sm:text-[10px] bg-red-500 text-white border-2 border-black px-2 py-1 font-bold hover:bg-red-600 shadow-[1px_1px_0_0_#000] cursor-pointer flex items-center gap-1">
+              <span>👨‍🍳</span> 사장님
+            </button>
+            <button onclick="toggleMenu(false)" class="pixel-btn-sun px-2.5 py-1 text-xs font-arcade text-white cursor-pointer">X</button>
+          </div>
+        </div>
+
+        <div id="adminBar" class="hidden bg-amber-200 p-2 border-b-2 border-black flex items-center justify-between text-xs font-bold">
+          <span>⚙️ 사장님 모드 활성화 중</span>
+          <button onclick="toggleStoreOpen()" id="btnToggleStore" class="px-2 py-0.5 bg-red-500 text-white border border-black font-arcade text-[10px]">영업 종료하기</button>
+        </div>
+
+        <div id="page1" class="p-3 sm:p-4 overflow-y-auto pixel-scroll flex-1 space-y-3 bg-[#fffbe8]">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="menuGrid"></div>
+        </div>
+
+        <div id="page2" class="p-3 sm:p-4 overflow-y-auto pixel-scroll flex-1 space-y-4 bg-[#fffbe8] hidden">
+          <div class="border-2 border-black bg-white p-1 shadow-[2px_2px_0_0_#000]">
+            <table class="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr class="bg-[#ffca3a] text-black border-b-2 border-black text-[10px] font-arcade">
+                  <th class="p-2" id="thIngredient">재료 (Item)</th>
+                  <th class="p-2" id="thOrigin">원산지 (Origin)</th>
+                  <th class="p-2" id="thNotes">비고 (Notes)</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200" id="originTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="bg-[#ffca3a] border-t-3 border-black p-3 flex items-center justify-between">
+          <button id="prevBtn" onclick="changePage(-1)" disabled class="pixel-btn-sky opacity-50 px-3 py-1.5 text-[10px] font-arcade cursor-not-allowed">◀ PREV</button>
+          <div class="text-xs font-bold text-black font-arcade" id="pageIndicator">PG 1 / 2</div>
+          <button id="nextBtn" onclick="changePage(1)" class="pixel-btn-sky px-3 py-1.5 text-[10px] font-arcade cursor-pointer">NEXT ➔</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAY & ORDER MODAL -->
+    <div id="payModal" class="absolute inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 hidden">
+      <div class="pixel-box-vibrant w-full max-w-sm p-4 bg-amber-50 flex flex-col gap-3">
+        <div class="flex items-center justify-between border-b-2 border-black pb-2">
+          <h3 class="font-bold text-sm text-black flex items-center gap-1.5">
+            💳 <span id="payModalTitle">계좌이체 주문</span>
+          </h3>
+          <button onclick="togglePayModal(false)" class="pixel-btn-sun px-2 py-0.5 text-xs font-bold">X</button>
+        </div>
+
+        <div class="bg-white border-2 border-black p-3 text-xs space-y-2">
+          <div class="font-bold text-gray-800" id="selectedItemName">메뉴 선택됨</div>
+          <div class="text-lg font-black text-red-600" id="selectedItemPrice">₩ 0</div>
+          <p class="text-[11px] text-gray-600 leading-tight">선택하신 메뉴 수량을 확인 후 아래 계좌로 입금해 주시면 즉시 조리가 시작됩니다.</p>
+        </div>
+
+        <div class="bg-amber-100 border-2 border-black p-2.5 flex items-center justify-between">
+          <div>
+            <div class="text-[10px] font-bold text-gray-600">카카오뱅크 (TacoTaco)</div>
+            <div class="text-xs font-black tracking-wider" id="bankAccountNum">3333-01-2345678</div>
+          </div>
+          <button onclick="copyAccountNum()" class="pixel-btn-sky px-2.5 py-1 text-[10px] font-bold">복사</button>
+        </div>
+
+        <div class="flex gap-2">
+          <button onclick="openEasyPay('kakaopay')" class="pixel-btn bg-yellow-300 text-black w-1/2 py-2 text-xs font-bold border-2 border-black shadow-[2px_2px_0_0_#000]">카카오페이</button>
+          <button onclick="openEasyPay('toss')" class="pixel-btn bg-blue-500 text-white w-1/2 py-2 text-xs font-bold border-2 border-black shadow-[2px_2px_0_0_#000]">토스 송금</button>
+        </div>
+
+        <button onclick="confirmOrder()" class="pixel-btn-emerald py-2.5 text-xs font-bold text-white w-full">입금 완료했어요! 👍</button>
+      </div>
+    </div>
+
+  </div> <!-- END APP-ROOT -->
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <script>
     lucide.createIcons();
 
-    // 1. MULTILINGUAL DICTIONARY WITH MENU & ORIGIN TRANSLATIONS
+    let isAdmin = new URLSearchParams(window.location.search).get('admin') === 'true';
+    let isStoreOpen = true;
+
+    let dynamicMenuItems = [
+      { id: 1, name: 'Carne Asada Taco', krName: '카르네 아사다 타코', price: '₩ 4,500', numPrice: 4500, desc: '직화로 구운 부채살, 고수, 다진 양파, 살사 베르데', stock: 6, icon: '🥩' },
+      { id: 2, name: 'Birria Quesa Taco', krName: '비리아 퀘사 타코', price: '₩ 5,000', numPrice: 5000, desc: '푹 삶은 우삼겹, 듬뿍 넣은 와하카 치즈, 비리아 콘소메 스튜', stock: 18, icon: '🧀' },
+      { id: 3, name: 'Al Pastor Taco', krName: '알 파스토르 타코', price: '₩ 4,500', numPrice: 4500, desc: '멕시칸 양념 돼지고기, 구운 파인애플, 살사 로하', stock: 24, icon: '🍍' },
+      { id: 4, name: 'Baja Fish Taco', krName: '바하 피쉬 타코', price: '₩ 5,000', numPrice: 5000, desc: '바삭한 맥주 튀김 옷을 입힌 대구살, 치폴레 크레마, 양배추 슬로', stock: 3, icon: '🐟' }
+    ];
+
     const translations = {
       ko: {
-        noticeKor: "공지!",
         noticeTitle: "공지사항 (NOTICE)",
         menuBtn: "MENU",
         openMenu: "OPEN MENU",
@@ -457,12 +533,6 @@
         closeBtn: "닫기",
         stockLeftText: "개 남음",
         spots: ["홍대", "경복궁", "남산", "강남", "여의도"],
-        menuItems: [
-          { name: 'Carne Asada Taco', krName: '카르네 아사다 타코', price: '₩ 4,500', desc: '직화로 구운 부채살, 고수, 다진 양파, 살사 베르데', stock: 6, icon: '🥩' },
-          { name: 'Birria Quesa Taco', krName: '비리아 퀘사 타코', price: '₩ 5,000', desc: '푹 삶은 우삼겹, 듬뿍 넣은 와하카 치즈, 비리아 콘소메 스튜', stock: 18, icon: '🧀' },
-          { name: 'Al Pastor Taco', krName: '알 파스토르 타코', price: '₩ 4,500', desc: '멕시칸 양념 돼지고기, 구운 파인애플, 살사 로하', stock: 24, icon: '🍍' },
-          { name: 'Baja Fish Taco', krName: '바하 피쉬 타코', price: '₩ 5,000', desc: '바삭한 맥주 튀김 옷을 입힌 대구살, 치폴레 크레마, 양배추 슬로', stock: 3, icon: '🐟' }
-        ],
         originData: [
           { ingredient: '소고기 (Beef)', origin: '미국산 / 호주산', note: 'USDA 초이스 등급 부채살 및 양지' },
           { ingredient: '돼지고기 (Pork)', origin: '국내산 (제주)', note: '제주산 무항생제 생목살' },
@@ -471,7 +541,6 @@
         ]
       },
       en: {
-        noticeKor: "ANNOUNCEMENT",
         noticeTitle: "NOTICE & ANNOUNCEMENTS",
         menuBtn: "MENU",
         openMenu: "OPEN MENU",
@@ -490,182 +559,11 @@
         closeBtn: "Close",
         stockLeftText: " left",
         spots: ["Hongdae", "Palace", "Namsan", "Gangnam", "Yeouido"],
-        menuItems: [
-          { name: 'Carne Asada Taco', krName: 'Grilled Beef Taco', price: '₩ 4,500', desc: 'Flame-grilled flat iron steak, cilantro, diced onions, green salsa', stock: 6, icon: '🥩' },
-          { name: 'Birria Quesa Taco', krName: 'Cheese & Beef Taco', price: '₩ 5,000', desc: 'Slow-braised beef brisket, melted Oaxaca cheese, consommé dip', stock: 18, icon: '🧀' },
-          { name: 'Al Pastor Taco', krName: 'Marinated Pork Taco', price: '₩ 4,500', desc: 'Mexican spiced pork, roasted pineapple, red salsa', stock: 24, icon: '🍍' },
-          { name: 'Baja Fish Taco', krName: 'Crispy Cod Taco', price: '₩ 5,000', desc: 'Beer-battered cod fillet, chipotle crema, cabbage slaw', stock: 3, icon: '🐟' }
-        ],
         originData: [
           { ingredient: 'Beef', origin: 'USA / Australia', note: 'USDA Choice Flat Iron & Brisket' },
           { ingredient: 'Pork', origin: 'Domestic (Jeju)', note: 'Antibiotic-free fresh pork shoulder' },
           { ingredient: 'Chicken', origin: 'Domestic (Korea)', note: 'Fresh chilled boneless thigh' },
           { ingredient: 'Cod Fish', origin: 'Russia / Deep Sea', note: 'Wild-caught boneless fillet' }
-        ]
-      },
-      fr: {
-        noticeKor: "AVIS",
-        noticeTitle: "ANNONCES (NOTICE)",
-        menuBtn: "MENU",
-        openMenu: "OUVRIR MENU",
-        weather: "Météo:",
-        temp: "Temp:",
-        seoulSpots: "📍 EMPLACEMENTS:",
-        currentLoc: "Position:",
-        timeLeft: "Temps rest:",
-        visits: "Visites:",
-        revisits: "Revisites:",
-        thIngredient: "Ingrédient",
-        thOrigin: "Origine",
-        thNotes: "Notes",
-        hideNotice: "Ne plus afficher aujourd'hui",
-        editNoticeBtn: "✏️ Éditer",
-        closeBtn: "Fermer",
-        stockLeftText: " restants",
-        spots: ["Hongdae", "Palais", "Namsan", "Gangnam", "Yeouido"],
-        menuItems: [
-          { name: 'Taco Carne Asada', krName: 'Taco au Bœuf Grillé', price: '₩ 4,500', desc: 'Bœuf grillé, coriandre, oignons, salsa verte', stock: 6, icon: '🥩' },
-          { name: 'Taco Birria Quesa', krName: 'Taco Bœuf & Fromage', price: '₩ 5,000', desc: 'Bœuf mijoté, fromage Oaxaca fondu, bouillon consommé', stock: 18, icon: '🧀' },
-          { name: 'Taco Al Pastor', krName: 'Taco Porc Épicé', price: '₩ 4,500', desc: 'Porc épicé mexicain, ananas rôti, salsa rouge', stock: 24, icon: '🍍' },
-          { name: 'Taco Baja Fish', krName: 'Taco Poisson Croustillant', price: '₩ 5,000', desc: 'Mors de cabillaud fris à la bière, crème chipotle, chou', stock: 3, icon: '🐟' }
-        ],
-        originData: [
-          { ingredient: 'Bœuf', origin: 'USA / Australie', note: 'Morceaux de bœuf sélection Choice' },
-          { ingredient: 'Porc', origin: 'Domestique (Jeju)', note: 'Épaule de porc frais sans antibiotiques' },
-          { ingredient: 'Poulet', origin: 'Domestique (Corée)', note: 'Cuisse de poulet frais désossée' },
-          { ingredient: 'Cabillaud', origin: 'Russie / Haute mer', note: 'Filet de cabillaud sauvage' }
-        ]
-      },
-      es: {
-        noticeKor: "AVISO",
-        noticeTitle: "ANUNCIOS (NOTICE)",
-        menuBtn: "MENÚ",
-        openMenu: "VER MENÚ",
-        weather: "Clima:",
-        temp: "Temp:",
-        seoulSpots: "📍 UBICACIONES:",
-        currentLoc: "Ubicación:",
-        timeLeft: "Restante:",
-        visits: "Visitas:",
-        revisits: "Revisitas:",
-        thIngredient: "Ingrediente",
-        thOrigin: "Origen",
-        thNotes: "Notas",
-        hideNotice: "No mostrar hoy",
-        editNoticeBtn: "✏️ Editar",
-        closeBtn: "Cerrar",
-        stockLeftText: " restantes",
-        spots: ["Hongdae", "Palacio", "Namsan", "Gangnam", "Yeouido"],
-        menuItems: [
-          { name: 'Taco de Carne Asada', krName: 'Taco de Res Asada', price: '₩ 4,500', desc: 'Carne de res a la parrilla, cilantro, cebolla, salsa verde', stock: 6, icon: '🥩' },
-          { name: 'Taco de Birria Quesa', krName: 'Taco de Queso y Res', price: '₩ 5,000', desc: 'Res estofada, queso Oaxaca fundido, consomé', stock: 18, icon: '🧀' },
-          { name: 'Taco al Pastor', krName: 'Taco de Cerdo Adobado', price: '₩ 4,500', desc: 'Cerdo marinado, piña asada, salsa roja', stock: 24, icon: '🍍' },
-          { name: 'Taco Baja Fish', krName: 'Taco de Pescado', price: '₩ 5,000', desc: 'Bacalao empanizado a la cerveza, crema de chipotle, col', stock: 3, icon: '🐟' }
-        ],
-        originData: [
-          { ingredient: 'Carne de Res', origin: 'EE. UU. / Australia', note: 'Corte USDA Choice' },
-          { ingredient: 'Carne de Cerdo', origin: 'Nacional (Jeju)', note: 'Lomo de cerdo sin antibióticos' },
-          { ingredient: 'Pollo', origin: 'Nacional (Corea)', note: 'Muslo de pollo deshuesado fresco' },
-          { ingredient: 'Bacalao', origin: 'Rusia / Alta Mar', note: 'Filete de bacalao silvestre' }
-        ]
-      },
-      ja: {
-        noticeKor: "お知らせ",
-        noticeTitle: "お知らせ (NOTICE)",
-        menuBtn: "メニュー",
-        openMenu: "メニューを見る",
-        weather: "天気:",
-        temp: "気温:",
-        seoulSpots: "📍 スポット移動:",
-        currentLoc: "現在地:",
-        timeLeft: "残り時間:",
-        visits: "訪問者:",
-        revisits: "再訪問:",
-        thIngredient: "材料",
-        thOrigin: "原産地",
-        thNotes: "備考",
-        hideNotice: "今日一日表示しない",
-        editNoticeBtn: "✏️ 編集",
-        closeBtn: "閉じる",
-        stockLeftText: "個残り",
-        spots: ["弘大", "景福宮", "南山", "江南", "汝矣島"],
-        menuItems: [
-          { name: 'Carne Asada Taco', krName: 'カルネアサダタコ', price: '₩ 4,500', desc: '直火焼き牛ミスジ、パクチー、刻み玉ねぎ、サルサベルデ', stock: 6, icon: '🥩' },
-          { name: 'Birria Quesa Taco', krName: 'ビリアクエサタコ', price: '₩ 5,000', desc: 'じっくり煮込んだ牛バラ肉、濃厚オアハカチーズ、コンソメスープ', stock: 18, icon: '🧀' },
-          { name: 'Al Pastor Taco', krName: 'アルパストールタコ', price: '₩ 4,500', desc: 'メキシカンスパイス豚肉、焼きパイナップル、サルサロハ', stock: 24, icon: '🍍' },
-          { name: 'Baja Fish Taco', krName: 'バハフィッシュタコ', price: '₩ 5,000', desc: 'サクサクのビール衣のタラ、チポトレクレマ、キャベツスロー', stock: 3, icon: '🐟' }
-        ],
-        originData: [
-          { ingredient: '牛肉 (Beef)', origin: 'アメリカ産 / オーストラリア産', note: 'USDAチョイス等級ミスジ＆バラ肉' },
-          { ingredient: '豚肉 (Pork)', origin: '韓国国産 (済州)', note: '済州産無抗生物質生の肩ロース' },
-          { ingredient: '鶏肉 (Chicken)', origin: '韓国国産', note: '新鮮な冷蔵モモ肉' },
-          { ingredient: 'タラ (Fish)', origin: 'ロシア産 / 遠洋産', note: '天然タラの切り身' }
-        ]
-      },
-      de: {
-        noticeKor: "HINWEIS",
-        noticeTitle: "ANKÜNDIGUNGEN (NOTICE)",
-        menuBtn: "MENÜ",
-        openMenu: "MENÜ ÖFFNEN",
-        weather: "Wetter:",
-        temp: "Temp:",
-        seoulSpots: "📍 ORTE:",
-        currentLoc: "Standort:",
-        timeLeft: "Restzeit:",
-        visits: "Besuche:",
-        revisits: "Wiederholungen:",
-        thIngredient: "Zutat",
-        thOrigin: "Herkunft",
-        thNotes: "Hinweise",
-        hideNotice: "Heute nicht mehr anzeigen",
-        editNoticeBtn: "✏️ Bearbeiten",
-        closeBtn: "Schließen",
-        stockLeftText: " übrig",
-        spots: ["Hongdae", "Palast", "Namsan", "Gangnam", "Yeouido"],
-        menuItems: [
-          { name: 'Carne Asada Taco', krName: 'Gegrillter Rindfleisch-Taco', price: '₩ 4,500', desc: 'Gegrilltes Rindfleisch, Koriander, Zwiebeln, grüne Salsa', stock: 6, icon: '🥩' },
-          { name: 'Birria Quesa Taco', krName: 'Käse & Rind-Taco', price: '₩ 5,000', desc: 'Geschmortes Rindfleisch, geschmolzener Oaxaca-Käse, Consommé', stock: 18, icon: '🧀' },
-          { name: 'Al Pastor Taco', krName: 'Gewürztes Schweinefleisch', price: '₩ 4,500', desc: 'Mexikanisch gewürztes Schweinefleisch, Ananas, rote Salsa', stock: 24, icon: '🍍' },
-          { name: 'Baja Fish Taco', krName: 'Knuspriger Fisch-Taco', price: '₩ 5,000', desc: 'In Bierteig frittierter Kabeljau, Chipotle-Creme, Krautsalat', stock: 3, icon: '🐟' }
-        ],
-        originData: [
-          { ingredient: 'Rindfleisch', origin: 'USA / Australien', note: 'USDA Choice Rinderbrust' },
-          { ingredient: 'Schweinefleisch', origin: 'Inland (Jeju)', note: 'Antibiotikafreier Schweinekamm' },
-          { ingredient: 'Hähnchen', origin: 'Inland (Korea)', note: 'Frisches entbeintes Keulenfleisch' },
-          { ingredient: 'Dorsch / Kabeljau', origin: 'Russland / Tiefsee', note: 'Wildfang-Kabeljaufilet' }
-        ]
-      },
-      it: {
-        noticeKor: "AVVISO",
-        noticeTitle: "AVVISI (NOTICE)",
-        menuBtn: "MENU",
-        openMenu: "APRI MENU",
-        weather: "Meteo:",
-        temp: "Temp:",
-        seoulSpots: "📍 POSIZIONI:",
-        currentLoc: "Posizione:",
-        timeLeft: "Rimanente:",
-        visits: "Visite:",
-        revisits: "Rivisite:",
-        thIngredient: "Ingrediente",
-        thOrigin: "Origine",
-        thNotes: "Note",
-        hideNotice: "Non mostrare più oggi",
-        editNoticeBtn: "✏️ Modifica",
-        closeBtn: "Chiudi",
-        stockLeftText: " rimasti",
-        spots: ["Hongdae", "Palazzo", "Namsan", "Gangnam", "Yeouido"],
-        menuItems: [
-          { name: 'Carne Asada Taco', krName: 'Taco con Manzo Grigliato', price: '₩ 4,500', desc: 'Manzo grigliato, coriandolo, cipolle, salsa verde', stock: 6, icon: '🥩' },
-          { name: 'Birria Quesa Taco', krName: 'Taco Formaggio e Manzo', price: '₩ 5,000', desc: 'Manzo stufato, formaggio Oaxaca fuso, consommé', stock: 18, icon: '🧀' },
-          { name: 'Al Pastor Taco', krName: 'Taco Maiale Speziato', price: '₩ 4,500', desc: 'Maiale marinato, ananas grigliato, salsa rossa', stock: 24, icon: '🍍' },
-          { name: 'Baja Fish Taco', krName: 'Taco di Pesce Croccante', price: '₩ 5,000', desc: 'Merluzzo fritto in Pastella, crema di chipotle, cavolo', stock: 3, icon: '🐟' }
-        ],
-        originData: [
-          { ingredient: 'Carne di Manzo', origin: 'USA / Australia', note: 'Taglio USDA Choice' },
-          { ingredient: 'Carne di Maiale', origin: 'Nazionale (Jeju)', note: 'Coppa di maiale fresca' },
-          { ingredient: 'Pollo', origin: 'Nazionale (Corea)', note: 'Coscia di pollo disossata fresca' },
-          { ingredient: 'Merluzzo', origin: 'Russia / Mare Aperto', note: 'Filetto di merluzzo selvatico' }
         ]
       }
     };
@@ -676,9 +574,7 @@
       currentLang = lang;
       const t = translations[lang] || translations.ko;
 
-      document.getElementById('noticeBadgeTextKorean').innerText = t.noticeKor;
       document.getElementById('noticePanelTitle').innerText = t.noticeTitle;
-      document.getElementById('noticeModalTitle').innerText = t.noticeTitle;
       document.getElementById('menuBtnTextMobile').innerText = t.menuBtn;
       document.getElementById('btnOpenMenu').innerText = t.openMenu;
       document.getElementById('lblWeather').innerText = t.weather;
@@ -692,17 +588,13 @@
       document.getElementById('lblRevisitsMobile').innerText = t.revisits;
 
       document.getElementById('lblNoticeHide').innerText = t.hideNotice;
-      document.getElementById('lblNoticeHideMobile').innerText = t.hideNotice;
       document.getElementById('btnEditNotice').innerText = t.editNoticeBtn;
-      document.getElementById('btnEditNoticeMobile').innerText = t.editNoticeBtn;
       document.getElementById('btnCloseNotice').innerText = t.closeBtn;
-      document.getElementById('btnCloseNoticeMobile').innerText = t.closeBtn;
 
       document.getElementById('thIngredient').innerText = t.thIngredient;
       document.getElementById('thOrigin').innerText = t.thOrigin;
       document.getElementById('thNotes').innerText = t.thNotes;
 
-      // Update spot button titles
       for (let i = 0; i < 5; i++) {
         if (t.spots && t.spots[i]) {
           const btnDesktop = document.getElementById(`spotBtn${i}`);
@@ -718,28 +610,6 @@
       renderMenu();
     }
 
-    // 2. VISITOR TRACKER
-    function trackVisitors() {
-      let totalVisits = parseInt(localStorage.getItem('taco_total_visits') || '0', 10);
-      let revisits = parseInt(localStorage.getItem('taco_revisits') || '0', 10);
-
-      if (localStorage.getItem('taco_has_visited')) {
-        revisits += 1;
-      } else {
-        localStorage.setItem('taco_has_visited', 'true');
-      }
-      totalVisits += 1;
-
-      localStorage.setItem('taco_total_visits', totalVisits);
-      localStorage.setItem('taco_revisits', revisits);
-
-      document.getElementById('totalVisitsCount').innerText = totalVisits;
-      document.getElementById('revisitsCount').innerText = revisits;
-      document.getElementById('totalVisitsCountMobile').innerText = totalVisits;
-      document.getElementById('revisitsCountMobile').innerText = revisits;
-    }
-
-    // 3. MAP & TRUCK MARKER
     const seoulSpots = [
       { lat: 37.5566, lng: 126.9236, name: 'Hongdae St. Exit 9 (홍대입구역)', code: 'HONGDAE' },
       { lat: 37.5796, lng: 126.9770, name: 'Gyeongbokgung Palace (경복궁)', code: 'PALACE' },
@@ -765,14 +635,6 @@
 
     const truckMarker = L.marker([seoulSpots[0].lat, seoulSpots[0].lng], { icon: customTruckIcon }).addTo(map);
 
-    const phrases = ["Tasty Tacos! 🌮", "Cooking Live! 🔥", "Fresh Daily! 🌱", "Hongdae Stop! 📍"];
-    let phraseIdx = 0;
-    setInterval(() => {
-      phraseIdx = (phraseIdx + 1) % phrases.length;
-      const elem = document.getElementById('truckSpeech');
-      if (elem) elem.innerText = phrases[phraseIdx];
-    }, 3500);
-
     function moveToSpot(idx) {
       const spot = seoulSpots[idx];
       map.flyTo([spot.lat, spot.lng], 15, { duration: 1.2 });
@@ -784,62 +646,196 @@
       document.getElementById('seoulSpotBadgeMobile').innerText = spot.code;
     }
 
-    // 4. NOTICE SYSTEM WITH "TODAY HIDE" EXPIRATION
-    function checkNoticeExpiration() {
-      const hideTimestamp = localStorage.getItem('taco_notice_hide_timestamp');
-      if (hideTimestamp) {
-        const now = Date.now();
-        if (now - parseInt(hideTimestamp, 10) < 24 * 60 * 60 * 1000) {
-          document.getElementById('noticeContainer').classList.add('hidden');
-          return true;
-        } else {
-          localStorage.removeItem('taco_notice_hide_timestamp');
-          document.getElementById('noticeContainer').classList.remove('hidden');
+    function toggleAdminMode() {
+      if (!isAdmin) {
+        document.getElementById('adminPasswordInput').value = '';
+        document.getElementById('adminAuthError').classList.add('hidden');
+        document.getElementById('adminAuthModal').classList.remove('hidden');
+        setTimeout(() => document.getElementById('adminPasswordInput').focus(), 100);
+      } else {
+        if (confirm("사장님 모드를 해제하시겠습니까?")) {
+          isAdmin = false;
+          applyAdminState();
         }
       }
-      return false;
+    }
+
+    function closeAdminAuthModal() {
+      document.getElementById('adminAuthModal').classList.add('hidden');
+    }
+
+    function submitAdminAuth() {
+      const inputPass = document.getElementById('adminPasswordInput').value;
+      if (inputPass === "1234") {
+        isAdmin = true;
+        closeAdminAuthModal();
+        applyAdminState();
+      } else {
+        document.getElementById('adminAuthError').classList.remove('hidden');
+      }
+    }
+
+    document.getElementById('adminPasswordInput').addEventListener('keyup', function(e) {
+      if (e.key === 'Enter') submitAdminAuth();
+    });
+
+    function applyAdminState() {
+      document.getElementById('adminBar').classList.toggle('hidden', !isAdmin);
+      document.getElementById('btnEditNotice').classList.toggle('hidden', !isAdmin);
+      renderMenu();
+    }
+
+    function toggleStoreOpen() {
+      isStoreOpen = !isStoreOpen;
+      const cookingBadge = document.getElementById('cookingBadge');
+      const btnToggle = document.getElementById('btnToggleStore');
+
+      if (isStoreOpen) {
+        cookingBadge.innerText = "OPEN 🌮";
+        cookingBadge.className = "bg-[#ff5964] text-white px-2.5 py-1 text-[9px] font-arcade tracking-wider border-2 border-black shadow-[2px_2px_0_0_#000] ml-6";
+        btnToggle.innerText = "영업 종료하기";
+        btnToggle.className = "px-2 py-0.5 bg-red-500 text-white border border-black font-arcade text-[10px]";
+      } else {
+        cookingBadge.innerText = "CLOSED 🌙";
+        cookingBadge.className = "bg-gray-600 text-white px-2.5 py-1 text-[9px] font-arcade tracking-wider border-2 border-black shadow-[2px_2px_0_0_#000] ml-6";
+        btnToggle.innerText = "영업 시작하기";
+        btnToggle.className = "px-2 py-0.5 bg-emerald-600 text-white border border-black font-arcade text-[10px]";
+      }
+      renderMenu();
+    }
+
+    function changeStock(itemId, delta) {
+      const item = dynamicMenuItems.find(i => i.id === itemId);
+      if (item) {
+        item.stock = Math.max(0, item.stock + delta);
+        renderMenu();
+      }
+    }
+
+    function renderMenu() {
+      const t = translations[currentLang] || translations.ko;
+      const stockText = t.stockLeftText || "개 남음";
+
+      document.getElementById('menuGrid').innerHTML = dynamicMenuItems.map(item => `
+        <div class="border-2 border-black bg-white p-3 flex flex-col justify-between shadow-[2px_2px_0_0_#000]">
+          <div>
+            <div class="flex items-start justify-between gap-2 mb-1.5">
+              <div>
+                <h3 class="text-black font-bold text-xs sm:text-sm leading-snug">${item.icon} ${item.name}</h3>
+                <p class="text-[11px] text-gray-600 font-bold leading-tight">${item.krName}</p>
+              </div>
+              <span class="font-arcade text-black font-bold text-[10px] bg-[#ffca3a] px-1.5 py-0.5 border border-black shrink-0">${item.price}</span>
+            </div>
+            <p class="text-xs text-gray-700 mb-2 leading-relaxed font-medium">${item.desc}</p>
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between border-t border-black pt-2 text-xs mb-2">
+              <span class="text-gray-800 font-bold">Stock:</span>
+              <span class="font-bold ${item.stock === 0 ? 'text-gray-400' : item.stock <= 5 ? 'text-red-600 animate-pulse' : 'text-emerald-700'}">
+                ${item.stock === 0 ? 'SOLD OUT' : item.stock + stockText}
+              </span>
+            </div>
+
+            ${isAdmin ? `
+              <div class="flex items-center justify-between bg-amber-100 p-1 border border-black text-xs font-bold gap-1">
+                <span>재고 변경:</span>
+                <div class="flex gap-1">
+                  <button onclick="changeStock(${item.id}, -1)" class="px-2 py-0.5 bg-red-400 border border-black font-bold">-1</button>
+                  <button onclick="changeStock(${item.id}, 1)" class="px-2 py-0.5 bg-emerald-400 border border-black font-bold">+1</button>
+                </div>
+              </div>
+            ` : `
+              <button onclick="openOrderPay('${item.name}', '${item.price}')" ${(!isStoreOpen || item.stock === 0) ? 'disabled' : ''} 
+                class="w-full py-1.5 text-xs font-bold ${(!isStoreOpen || item.stock === 0) ? 'bg-gray-300 text-gray-500 border-2 border-gray-400 cursor-not-allowed' : 'pixel-btn-sun text-white'}">
+                ${!isStoreOpen ? '영업 종료' : item.stock === 0 ? '품절 (SOLD OUT)' : '주문하기 🌮'}
+              </button>
+            `}
+          </div>
+        </div>
+      `).join('');
+
+      document.getElementById('originTableBody').innerHTML = t.originData.map(row => `
+        <tr class="hover:bg-amber-50">
+          <td class="p-2 font-bold text-black text-xs">${row.ingredient}</td>
+          <td class="p-2 text-emerald-800 font-bold text-xs">${row.origin}</td>
+          <td class="p-2 text-gray-700 text-xs">${row.note}</td>
+        </tr>
+      `).join('');
+    }
+
+    function openOrderPay(name, price) {
+      document.getElementById('selectedItemName').innerText = name;
+      document.getElementById('selectedItemPrice').innerText = price;
+      togglePayModal(true);
+    }
+
+    function togglePayModal(show) {
+      document.getElementById('payModal').classList.toggle('hidden', !show);
+    }
+
+    function copyAccountNum() {
+      const acc = document.getElementById('bankAccountNum').innerText;
+      navigator.clipboard.writeText(acc);
+      alert('계좌번호가 복사되었습니다! ' + acc);
+    }
+
+    function openEasyPay(type) {
+      if (type === 'kakaopay') {
+        window.open('https://qr.kakaopay.com', '_blank');
+      } else {
+        window.open('https://toss.me', '_blank');
+      }
+    }
+
+    function confirmOrder() {
+      alert('주문 입금 확인 요청이 전송되었습니다! 사장님이 확인 후 번호를 불러드립니다.');
+      togglePayModal(false);
+      toggleMenu(false);
+    }
+
+    function checkNoticeExpiration() {
+      const hideTimestamp = localStorage.getItem('taco_notice_hide_timestamp');
+      if (hideTimestamp && (Date.now() - parseInt(hideTimestamp, 10) < 24 * 60 * 60 * 1000)) {
+        toggleDesktopNotice(false);
+      } else {
+        toggleDesktopNotice(true);
+      }
     }
 
     function dismissNoticeForToday(checked) {
       if (checked) {
         localStorage.setItem('taco_notice_hide_timestamp', Date.now().toString());
-        document.getElementById('desktopNoticePanel').classList.add('hidden');
-        document.getElementById('noticeModal').classList.add('hidden');
-        document.getElementById('noticeContainer').classList.add('hidden');
-      }
-    }
-
-    function handleNoticeClick() {
-      if (window.innerWidth < 640) {
-        toggleMobileNotice(true);
-      } else {
-        const panel = document.getElementById('desktopNoticePanel');
-        panel.classList.toggle('hidden');
+        toggleDesktopNotice(false);
       }
     }
 
     function toggleDesktopNotice(show) {
-      const panel = document.getElementById('desktopNoticePanel');
-      if (typeof show === 'boolean') {
-        panel.classList.toggle('hidden', !show);
-      } else {
-        panel.classList.toggle('hidden');
+      const overlay = document.getElementById('desktopNoticeModalOverlay');
+      if (overlay) {
+        overlay.classList.toggle('hidden', !show);
       }
-    }
-
-    function toggleMobileNotice(show) {
-      document.getElementById('noticeModal').classList.toggle('hidden', !show);
     }
 
     function editNotice() {
-      const newText = prompt("새로운 공지사항 내용을 입력하세요:", document.getElementById('noticeContentText').innerText);
-      if (newText !== null && newText.trim() !== "") {
-        document.getElementById('noticeContentText').innerText = newText;
-        document.getElementById('noticeModalContent').innerText = newText;
-      }
+      if (!isAdmin) return;
+      const newText = prompt("새로운 공지사항을 입력하세요:", document.getElementById('noticeContentText').innerText);
+      if (newText) document.getElementById('noticeContentText').innerText = newText;
     }
 
-    // 5. WEATHER ENGINE
+    function trackVisitors() {
+      let totalVisits = parseInt(localStorage.getItem('taco_total_visits') || '0', 10) + 1;
+      let revisits = parseInt(localStorage.getItem('taco_revisits') || '0', 10) + (localStorage.getItem('taco_has_visited') ? 1 : 0);
+      localStorage.setItem('taco_has_visited', 'true');
+      localStorage.setItem('taco_total_visits', totalVisits);
+      localStorage.setItem('taco_revisits', revisits);
+
+      document.getElementById('totalVisitsCount').innerText = totalVisits;
+      document.getElementById('revisitsCount').innerText = revisits;
+      document.getElementById('totalVisitsCountMobile').innerText = totalVisits;
+      document.getElementById('revisitsCountMobile').innerText = revisits;
+    }
+
     let activePrecipitationType = null;
     async function fetchSeoulLiveWeather() {
       try {
@@ -852,7 +848,7 @@
         if (code >= 51 && code <= 67) {
           applyWeatherVisuals('radial-gradient(circle, transparent 40%, rgba(15, 23, 42, 0.65) 100%)', 'RAIN 🌧️', tempStr, '🌧️', 'rain');
         } else if (code >= 71 && code <= 77) {
-          applyWeatherVisuals('radial-gradient(circle, transparent 40%, rgba(226, 232, 240, 0.45) 100%)', 'SNOW ❄️', tempStr, '❄️', 'snow');
+          applyWeatherVisuals('radial-gradient(circle, transparent 40%, rgba(226, 232, 240, 0.45) 100%)', 'SNOW ❄️', tempStr, '❄', 'snow');
         } else {
           applyWeatherVisuals('radial-gradient(circle, transparent 60%, rgba(253, 224, 71, 0.2) 100%)', 'CLEAR ☀️', tempStr, '☀️', null);
         }
@@ -871,7 +867,6 @@
       activePrecipitationType = precipType;
     }
 
-    // Weather Particle Canvas
     const pCanvas = document.getElementById('precipCanvas');
     const pCtx = pCanvas.getContext('2d');
     let pWidth = pCanvas.width = window.innerWidth;
@@ -912,97 +907,23 @@
       requestAnimationFrame(renderPrecipitation);
     }
 
-    function applyDayNightMapFilter(isDay) {
-      const mapTileElement = document.querySelector('.leaflet-tile-pane');
-      if (!mapTileElement) return;
-
-      if (isDay === 1) {
-        mapTileElement.style.filter = 'brightness(100%) contrast(100%)';
-      } else {
-        mapTileElement.style.filter = 'brightness(65%) contrast(125%) hue-rotate(180deg) invert(80%)';
-      }
-    }
-
-    // 6. DYNAMICALLY TRANSLATED MENU & ORIGIN RENDERER
-    function renderMenu() {
-      const t = translations[currentLang] || translations.ko;
-      const menuItems = t.menuItems;
-      const originData = t.originData;
-      const stockText = t.stockLeftText || "개 남음";
-
-      document.getElementById('menuGrid').innerHTML = menuItems.map(item => `
-        <div class="border-2 border-black bg-white p-3 flex flex-col justify-between shadow-[2px_2px_0_0_#000]">
-          <div>
-            <div class="flex items-start justify-between gap-2 mb-1.5">
-              <div>
-                <h3 class="text-black font-bold text-xs sm:text-sm leading-snug">${item.icon} ${item.name}</h3>
-                <p class="text-[11px] text-gray-600 font-bold leading-tight">${item.krName}</p>
-              </div>
-              <span class="font-arcade text-black font-bold text-[10px] bg-[#ffca3a] px-1.5 py-0.5 border border-black shrink-0">${item.price}</span>
-            </div>
-            <p class="text-xs text-gray-700 mb-2 leading-relaxed font-medium">${item.desc}</p>
-          </div>
-          <div class="flex items-center justify-between border-t border-black pt-2 text-xs">
-            <span class="text-gray-800 font-bold">Stock:</span>
-            <span class="font-bold ${item.stock <= 8 ? 'text-red-600 animate-pulse' : 'text-emerald-700'}">${item.stock}${stockText}</span>
-          </div>
-        </div>
-      `).join('');
-
-      document.getElementById('originTableBody').innerHTML = originData.map(row => `
-        <tr class="hover:bg-amber-50">
-          <td class="p-2 font-bold text-black text-xs">${row.ingredient}</td>
-          <td class="p-2 text-emerald-800 font-bold text-xs">${row.origin}</td>
-          <td class="p-2 text-gray-700 text-xs">${row.note}</td>
-        </tr>
-      `).join('');
-    }
-
     let currentPage = 1;
-
-    function toggleMenu(show) { 
-      const modal = document.getElementById('menuModal');
-      if (modal) {
-        modal.classList.toggle('hidden', !show); 
-      }
-    }
-
+    function toggleMenu(show) { document.getElementById('menuModal').classList.toggle('hidden', !show); }
     function changePage(delta) {
       currentPage = Math.max(1, Math.min(2, currentPage + delta));
-
-      const page1 = document.getElementById('page1');
-      const page2 = document.getElementById('page2');
-      if (page1) page1.classList.toggle('hidden', currentPage !== 1);
-      if (page2) page2.classList.toggle('hidden', currentPage !== 2);
-      
-      const indicator = document.getElementById('pageIndicator');
-      if (indicator) indicator.innerText = `PG ${currentPage} / 2`;
-
-      const prevBtn = document.getElementById('prevBtn');
-      if (prevBtn) {
-        const isFirst = (currentPage === 1);
-        prevBtn.disabled = isFirst;
-        prevBtn.classList.toggle('opacity-50', isFirst);
-        prevBtn.classList.toggle('cursor-not-allowed', isFirst);
-        prevBtn.classList.toggle('cursor-pointer', !isFirst);
-      }
-
-      const nextBtn = document.getElementById('nextBtn');
-      if (nextBtn) {
-        const isLast = (currentPage === 2);
-        nextBtn.disabled = isLast;
-        nextBtn.classList.toggle('opacity-50', isLast);
-        nextBtn.classList.toggle('cursor-not-allowed', isLast);
-        nextBtn.classList.toggle('cursor-pointer', !isLast);
-      }
+      document.getElementById('page1').classList.toggle('hidden', currentPage !== 1);
+      document.getElementById('page2').classList.toggle('hidden', currentPage !== 2);
+      document.getElementById('pageIndicator').innerText = `PG ${currentPage} / 2`;
+      document.getElementById('prevBtn').disabled = currentPage === 1;
+      document.getElementById('nextBtn').disabled = currentPage === 2;
     }
 
-    // INITIALIZATION
-    checkNoticeExpiration();
     trackVisitors();
     fetchSeoulLiveWeather();
     renderPrecipitation();
     changeLanguage('ko');
+    checkNoticeExpiration();
+    if (isAdmin) applyAdminState();
   </script>
 </body>
 </html>
