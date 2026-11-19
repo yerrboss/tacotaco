@@ -2,8 +2,9 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TacoTaco - Realtime Pixel Food Truck</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌮</text></svg>">
   
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -28,7 +29,6 @@
       box-sizing: border-box;
     }
 
-    /* 창을 극단적으로 줄여도 550px 밑으로는 안 줄어들고 스크롤바가 생기도록 방어 */
     html, body {
       width: 100%;
       height: 100%;
@@ -82,7 +82,7 @@
       justify-content: center;
       cursor: pointer;
     }
-    .pixel-btn:active {
+    .pixel-btn:active:not(:disabled) {
       transform: translate(2px, 2px) !important;
       box-shadow: 1px 1px 0 0 #000 !important;
     }
@@ -121,6 +121,7 @@
       font-weight: 700;
       padding: 4px 8px;
       border-radius: 2px;
+      cursor: pointer;
     }
 
     .pixel-scroll::-webkit-scrollbar { width: 8px; }
@@ -253,7 +254,7 @@
           </label>
 
           <div class="flex gap-1.5">
-            <button id="btnEditNotice" onclick="editNotice()" class="hidden text-[10px] bg-sky-200 border border-black px-2 py-1 font-bold hover:bg-sky-300">✏ 수정</button>
+            <button id="btnEditNotice" onclick="editNotice()" class="hidden text-[10px] bg-sky-200 border border-black px-2 py-1 font-bold hover:bg-sky-300">✏️ 수정</button>
             <button id="btnCloseNotice" onclick="toggleDesktopNotice(false)" class="text-[10px] bg-amber-200 border border-black px-2 py-1 font-bold hover:bg-amber-300">닫기</button>
           </div>
         </div>
@@ -273,11 +274,6 @@
       <select id="langSelectMobile" onchange="changeLanguage(this.value)" class="bg-amber-300 border-2 border-black text-[10px] font-bold p-1">
         <option value="ko">🇰🇷 한국어</option>
         <option value="en">🇺🇸 English</option>
-        <option value="fr">🇫🇷 Français</option>
-        <option value="es">🇪🇸 Español</option>
-        <option value="ja">🇯🇵 日本語</option>
-        <option value="de">🇩🇪 Deutsch</option>
-        <option value="it">🇮🇹 Italiano</option>
       </select>
 
       <button onclick="toggleMenu(true)" class="pixel-btn-sun px-2.5 py-1.5 flex items-center gap-1 font-arcade text-[8px] border-2 border-black shrink-0">
@@ -309,13 +305,8 @@
           <span><span id="lblTemp">온도:</span> <strong id="tempDisplay" class="text-black font-bold">--°C</strong></span>
           
           <select id="langSelectDesktop" onchange="changeLanguage(this.value)" class="bg-amber-200 border border-black text-xs font-bold px-1.5 py-0.5">
-            <option value="ko">🌐 한국어</option>
-            <option value="en">🌐 English</option>
-            <option value="fr">🌐 Français</option>
-            <option value="es">🌐 Español</option>
-            <option value="ja">🌐 日本語</option>
-            <option value="de">🇩🇪 Deutsch</option>
-            <option value="it">🇮🇹 Italiano</option>
+            <option value="ko">🇰🇷 한국어</option>
+            <option value="en">🇺🇸 English</option>
           </select>
         </div>
       </div>
@@ -323,7 +314,7 @@
       <div class="pixel-box-vibrant p-2 flex flex-col gap-1.5 max-w-xs">
         <div class="flex justify-between items-center">
           <span class="font-bold text-[10px] text-gray-800" id="lblSeoulSpots">📍 스팟 이동 (SEOUL SPOTS):</span>
-          <button onclick="toggleAdminMode()" class="text-[9px] bg-red-500 text-white border border-black px-1.5 py-0.5 font-bold hover:bg-red-600 shadow-[1px_1px_0_0_#000]">👨‍🍳 사장님</button>
+          <button onclick="toggleAdminMode()" id="btnAdminDesktop" class="text-[9px] bg-red-500 text-white border border-black px-1.5 py-0.5 font-bold hover:bg-red-600 shadow-[1px_1px_0_0_#000]">👨‍🍳 사장님</button>
         </div>
         <div class="flex flex-wrap gap-1">
           <button onclick="moveToSpot(0)" class="location-btn bg-orange-100 text-black" id="spotBtn0">홍대</button>
@@ -377,7 +368,7 @@
 
     <!-- TABLET/PC BOTTOM CENTER COMPONENT (>= 640px) -->
     <div class="hidden sm:block absolute bottom-4 left-1/2 -translate-x-1/2 z-30 pointer-events-auto">
-      <div class="speech-bubble border-2 border-black bg-white shadow-[3px_3px_0_0_#000] text-center whitespace-nowrap px-4 py-2">
+      <div id="bottomPayBannerDesktop" class="speech-bubble border-2 border-black bg-white shadow-[3px_3px_0_0_#000] text-center whitespace-nowrap px-4 py-2">
         ⚡ <strong>현장 결제 가능!</strong> (카카오페이 / 계좌이체 / 현금 ok)
       </div>
     </div>
@@ -385,7 +376,7 @@
     <!-- MOBILE BOTTOM DRAWER HUD (< 640px) -->
     <div class="sm:hidden absolute bottom-3 left-2 right-2 z-30 pointer-events-auto flex flex-col gap-2 min-w-[340px]">
       <div class="flex items-center justify-between gap-2">
-        <div class="speech-bubble text-center border-2 border-black shadow-[2px_2px_0_0_#000] flex-1">
+        <div id="bottomPayBannerMobile" class="speech-bubble text-center border-2 border-black shadow-[2px_2px_0_0_#000] flex-1">
           ⚡ <strong>현장 결제 가능!</strong> (카카오페이/계좌이체/현금)
         </div>
       </div>
@@ -401,7 +392,7 @@
 
         <div class="flex items-center justify-between text-[10px] font-bold">
           <span>👀 <span id="lblVisitsMobile">방문:</span> <strong id="totalVisitsCountMobile" class="text-blue-600">--</strong></span>
-          <button onclick="toggleAdminMode()" class="text-[9px] bg-red-500 text-white border border-black px-1.5 py-0.5 font-bold">👨‍🍳 사장님 설정</button>
+          <button onclick="toggleAdminMode()" id="btnAdminMobile" class="text-[9px] bg-red-500 text-white border border-black px-1.5 py-0.5 font-bold">👨‍🍳 사장님 설정</button>
           <span>🔄 <span id="lblRevisitsMobile">재방문:</span> <strong id="revisitsCountMobile" class="text-emerald-600">--</strong></span>
         </div>
 
@@ -424,8 +415,8 @@
             <h2 id="modalTitle" class="font-arcade text-black text-[10px] sm:text-xs tracking-wider truncate">TACOTACO MENU [PAGE 1/2]</h2>
           </div>
           <div class="flex items-center gap-2 shrink-0">
-            <button onclick="toggleAdminMode()" class="text-[9px] sm:text-[10px] bg-red-500 text-white border-2 border-black px-2 py-1 font-bold hover:bg-red-600 shadow-[1px_1px_0_0_#000] cursor-pointer flex items-center gap-1">
-              <span>👨‍🍳</span> 사장님
+            <button onclick="toggleAdminMode()" id="btnAdminModal" class="text-[9px] sm:text-[10px] bg-red-500 text-white border-2 border-black px-2 py-1 font-bold hover:bg-red-600 shadow-[1px_1px_0_0_#000] cursor-pointer flex items-center gap-1">
+              <span>👨‍🍳</span> <span id="lblAdminModalBtn">사장님</span>
             </button>
             <button onclick="toggleMenu(false)" class="pixel-btn-sun px-2.5 py-1 text-xs font-arcade text-white cursor-pointer">X</button>
           </div>
@@ -456,9 +447,9 @@
         </div>
 
         <div class="bg-[#ffca3a] border-t-3 border-black p-3 flex items-center justify-between">
-          <button id="prevBtn" onclick="changePage(-1)" disabled class="pixel-btn-sky opacity-50 px-3 py-1.5 text-[10px] font-arcade cursor-not-allowed">◀ PREV</button>
+          <button id="prevBtn" onclick="changePage(-1)" disabled class="pixel-btn pixel-btn-sky opacity-50 px-3 py-1.5 text-[10px] font-arcade cursor-not-allowed">◀ PREV</button>
           <div class="text-xs font-bold text-black font-arcade" id="pageIndicator">PG 1 / 2</div>
-          <button id="nextBtn" onclick="changePage(1)" class="pixel-btn-sky px-3 py-1.5 text-[10px] font-arcade cursor-pointer">NEXT ➔</button>
+          <button id="nextBtn" onclick="changePage(1)" class="pixel-btn pixel-btn-sky px-3 py-1.5 text-[10px] font-arcade cursor-pointer">NEXT ➔</button>
         </div>
       </div>
     </div>
@@ -476,23 +467,23 @@
         <div class="bg-white border-2 border-black p-3 text-xs space-y-2">
           <div class="font-bold text-gray-800" id="selectedItemName">메뉴 선택됨</div>
           <div class="text-lg font-black text-red-600" id="selectedItemPrice">₩ 0</div>
-          <p class="text-[11px] text-gray-600 leading-tight">선택하신 메뉴 수량을 확인 후 아래 계좌로 입금해 주시면 즉시 조리가 시작됩니다.</p>
+          <p id="payModalDesc" class="text-[11px] text-gray-600 leading-tight">선택하신 메뉴 수량을 확인 후 아래 계좌로 입금해 주시면 즉시 조리가 시작됩니다.</p>
         </div>
 
         <div class="bg-amber-100 border-2 border-black p-2.5 flex items-center justify-between">
           <div>
-            <div class="text-[10px] font-bold text-gray-600">카카오뱅크 (TacoTaco)</div>
-            <div class="text-xs font-black tracking-wider" id="bankAccountNum">3333-01-2345678</div>
+            <div class="text-[10px] font-bold text-gray-600" id="bankLabel">TacoTaco Demo Account</div>
+            <div class="text-xs font-black tracking-wider" id="bankAccountNum">DEMO-00-0000000</div>
           </div>
-          <button onclick="copyAccountNum()" class="pixel-btn-sky px-2.5 py-1 text-[10px] font-bold">복사</button>
+          <button onclick="copyAccountNum()" id="btnCopyAccount" class="pixel-btn-sky px-2.5 py-1 text-[10px] font-bold">복사</button>
         </div>
 
         <div class="flex gap-2">
-          <button onclick="openEasyPay('kakaopay')" class="pixel-btn bg-yellow-300 text-black w-1/2 py-2 text-xs font-bold border-2 border-black shadow-[2px_2px_0_0_#000]">카카오페이</button>
-          <button onclick="openEasyPay('toss')" class="pixel-btn bg-blue-500 text-white w-1/2 py-2 text-xs font-bold border-2 border-black shadow-[2px_2px_0_0_#000]">토스 송금</button>
+          <button onclick="openEasyPay('kakaopay')" class="pixel-btn bg-yellow-300 text-black w-1/2 py-2 text-xs font-bold border-2 border-black shadow-[2px_2px_0_0_#000]">KakaoPay</button>
+          <button onclick="openEasyPay('toss')" class="pixel-btn bg-blue-500 text-white w-1/2 py-2 text-xs font-bold border-2 border-black shadow-[2px_2px_0_0_#000]">Toss</button>
         </div>
 
-        <button onclick="confirmOrder()" class="pixel-btn-emerald py-2.5 text-xs font-bold text-white w-full">입금 완료했어요! 👍</button>
+        <button onclick="confirmOrder()" id="btnConfirmOrder" class="pixel-btn-emerald py-2.5 text-xs font-bold text-white w-full">입금 완료했어요! 👍</button>
       </div>
     </div>
 
@@ -505,19 +496,22 @@
 
     let isAdmin = new URLSearchParams(window.location.search).get('admin') === 'true';
     let isStoreOpen = true;
+    let currentSpotIdx = 0;
 
     let dynamicMenuItems = [
-      { id: 1, name: 'Carne Asada Taco', krName: '카르네 아사다 타코', price: '₩ 4,500', numPrice: 4500, desc: '직화로 구운 부채살, 고수, 다진 양파, 살사 베르데', stock: 6, icon: '🥩' },
-      { id: 2, name: 'Birria Quesa Taco', krName: '비리아 퀘사 타코', price: '₩ 5,000', numPrice: 5000, desc: '푹 삶은 우삼겹, 듬뿍 넣은 와하카 치즈, 비리아 콘소메 스튜', stock: 18, icon: '🧀' },
-      { id: 3, name: 'Al Pastor Taco', krName: '알 파스토르 타코', price: '₩ 4,500', numPrice: 4500, desc: '멕시칸 양념 돼지고기, 구운 파인애플, 살사 로하', stock: 24, icon: '🍍' },
-      { id: 4, name: 'Baja Fish Taco', krName: '바하 피쉬 타코', price: '₩ 5,000', numPrice: 5000, desc: '바삭한 맥주 튀김 옷을 입힌 대구살, 치폴레 크레마, 양배추 슬로', stock: 3, icon: '🐟' }
+      { id: 1, name: 'Carne Asada Taco', krName: '카르네 아사다 타코', price: '₩ 4,500', numPrice: 4500, desc: '직화로 구운 부채살, 고수, 다진 양파, 살사 베르데', descEn: 'Char-grilled flat iron steak, cilantro, diced onion, salsa verde', stock: 6, icon: '🥩' },
+      { id: 2, name: 'Birria Quesa Taco', krName: '비리아 퀘사 타코', price: '₩ 5,000', numPrice: 5000, desc: '푹 삶은 우삼겹, 듬뿍 넣은 와하카 치즈, 비리아 콘소메 스튜', descEn: 'Slow-braised beef brisket, melted Oaxaca cheese, birria consomé dip', stock: 18, icon: '🧀' },
+      { id: 3, name: 'Al Pastor Taco', krName: '알 파스토르 타코', price: '₩ 4,500', numPrice: 4500, desc: '멕시칸 양념 돼지고기, 구운 파인애플, 살사 로하', descEn: 'Marinated pork shoulder, roasted pineapple, salsa roja', stock: 24, icon: '🍍' },
+      { id: 4, name: 'Baja Fish Taco', krName: '바하 피쉬 타코', price: '₩ 5,000', numPrice: 5000, desc: '바삭한 맥주 튀김 옷을 입힌 대구살, 치폴레 크레마, 양배추 슬로', descEn: 'Crispy beer-battered cod fillet, chipotle crema, cabbage slaw', stock: 3, icon: '🐟' }
     ];
 
     const translations = {
       ko: {
         noticeTitle: "공지사항 (NOTICE)",
         menuBtn: "MENU",
-        openMenu: "OPEN MENU",
+        openMenu: "OPEN MENU & ORDER",
+        modalPage1: "TACOTACO MENU [PAGE 1/2]",
+        modalPage2: "TACOTACO ORIGIN [PAGE 2/2]",
         weather: "날씨:",
         temp: "온도:",
         seoulSpots: "📍 스팟 이동 (SEOUL SPOTS):",
@@ -525,6 +519,18 @@
         timeLeft: "남은 시간:",
         visits: "방문자:",
         revisits: "재방문:",
+        adminBtn: "👨‍🍳 사장님",
+        adminMobileBtn: "👨‍🍳 사장님 설정",
+        adminModalLabel: "사장님",
+        bottomPayDesktop: "⚡ <strong>현장 결제 가능!</strong> (카카오페이 / 계좌이체 / 현금 ok)",
+        bottomPayMobile: "⚡ <strong>현장 결제 가능!</strong> (카카오페이/계좌이체/현금)",
+        payTitle: "계좌이체 주문 (데모)",
+        payDesc: "선택하신 메뉴 수량을 확인 후 아래 계좌로 입금해 주시면 즉시 조리가 시작됩니다.",
+        copyBtn: "복사",
+        confirmBtn: "입금 완료했어요! 👍",
+        orderBtn: "주문하기 🌮",
+        closedBtn: "영업 종료",
+        soldOutBtn: "품절 (SOLD OUT)",
         thIngredient: "재료 (Item)",
         thOrigin: "원산지 (Origin)",
         thNotes: "비고 (Notes)",
@@ -543,14 +549,28 @@
       en: {
         noticeTitle: "NOTICE & ANNOUNCEMENTS",
         menuBtn: "MENU",
-        openMenu: "OPEN MENU",
+        openMenu: "OPEN MENU & ORDER",
+        modalPage1: "TACOTACO MENU [PAGE 1/2]",
+        modalPage2: "TACOTACO ORIGIN [PAGE 2/2]",
         weather: "Weather:",
         temp: "Temp:",
         seoulSpots: "📍 JUMP SPOTS:",
         currentLoc: "Current:",
         timeLeft: "Time Left:",
-        visits: "Total Visits:",
+        visits: "Visits:",
         revisits: "Revisits:",
+        adminBtn: "👨‍🍳 Owner",
+        adminMobileBtn: "👨‍🍳 Owner Mode",
+        adminModalLabel: "Owner",
+        bottomPayDesktop: "⚡ <strong>On-Site Pay OK!</strong> (KakaoPay / Bank Transfer / Cash)",
+        bottomPayMobile: "⚡ <strong>On-Site Pay OK!</strong> (KakaoPay / Transfer / Cash)",
+        payTitle: "Transfer Order (Demo)",
+        payDesc: "Confirm your item and send a demo transfer to start cooking right away.",
+        copyBtn: "Copy",
+        confirmBtn: "Transfer Complete! 👍",
+        orderBtn: "Order Now 🌮",
+        closedBtn: "Closed",
+        soldOutBtn: "SOLD OUT",
         thIngredient: "Ingredient",
         thOrigin: "Origin",
         thNotes: "Notes",
@@ -570,6 +590,11 @@
 
     let currentLang = 'ko';
 
+    function updateModalHeader() {
+      const t = translations[currentLang] || translations.ko;
+      document.getElementById('modalTitle').innerText = currentPage === 1 ? t.modalPage1 : t.modalPage2;
+    }
+
     function changeLanguage(lang) {
       currentLang = lang;
       const t = translations[lang] || translations.ko;
@@ -586,6 +611,17 @@
       document.getElementById('lblRevisits').innerText = t.revisits;
       document.getElementById('lblVisitsMobile').innerText = t.visits;
       document.getElementById('lblRevisitsMobile').innerText = t.revisits;
+
+      document.getElementById('btnAdminDesktop').innerText = t.adminBtn;
+      document.getElementById('btnAdminMobile').innerText = t.adminMobileBtn;
+      document.getElementById('lblAdminModalBtn').innerText = t.adminModalLabel;
+      document.getElementById('bottomPayBannerDesktop').innerHTML = t.bottomPayDesktop;
+      document.getElementById('bottomPayBannerMobile').innerHTML = t.bottomPayMobile;
+
+      document.getElementById('payModalTitle').innerText = t.payTitle;
+      document.getElementById('payModalDesc').innerText = t.payDesc;
+      document.getElementById('btnCopyAccount').innerText = t.copyBtn;
+      document.getElementById('btnConfirmOrder').innerText = t.confirmBtn;
 
       document.getElementById('lblNoticeHide').innerText = t.hideNotice;
       document.getElementById('btnEditNotice').innerText = t.editNoticeBtn;
@@ -607,6 +643,7 @@
       document.getElementById('langSelectMobile').value = lang;
       document.getElementById('langSelectDesktop').value = lang;
 
+      updateModalHeader();
       renderMenu();
     }
 
@@ -636,6 +673,7 @@
     const truckMarker = L.marker([seoulSpots[0].lat, seoulSpots[0].lng], { icon: customTruckIcon }).addTo(map);
 
     function moveToSpot(idx) {
+      currentSpotIdx = idx;
       const spot = seoulSpots[idx];
       map.flyTo([spot.lat, spot.lng], 15, { duration: 1.2 });
       truckMarker.setLatLng([spot.lat, spot.lng]);
@@ -644,6 +682,7 @@
       document.getElementById('locationNameMobile').innerText = spot.name;
       document.getElementById('seoulSpotBadge').innerText = spot.code;
       document.getElementById('seoulSpotBadgeMobile').innerText = spot.code;
+      fetchSeoulLiveWeather(spot.lat, spot.lng);
     }
 
     function toggleAdminMode() {
@@ -726,7 +765,7 @@
               </div>
               <span class="font-arcade text-black font-bold text-[10px] bg-[#ffca3a] px-1.5 py-0.5 border border-black shrink-0">${item.price}</span>
             </div>
-            <p class="text-xs text-gray-700 mb-2 leading-relaxed font-medium">${item.desc}</p>
+            <p class="text-xs text-gray-700 mb-2 leading-relaxed font-medium">${currentLang === 'en' ? item.descEn : item.desc}</p>
           </div>
 
           <div>
@@ -748,7 +787,7 @@
             ` : `
               <button onclick="openOrderPay('${item.name}', '${item.price}')" ${(!isStoreOpen || item.stock === 0) ? 'disabled' : ''} 
                 class="w-full py-1.5 text-xs font-bold ${(!isStoreOpen || item.stock === 0) ? 'bg-gray-300 text-gray-500 border-2 border-gray-400 cursor-not-allowed' : 'pixel-btn-sun text-white'}">
-                ${!isStoreOpen ? '영업 종료' : item.stock === 0 ? '품절 (SOLD OUT)' : '주문하기 🌮'}
+                ${!isStoreOpen ? t.closedBtn : item.stock === 0 ? t.soldOutBtn : t.orderBtn}
               </button>
             `}
           </div>
@@ -777,7 +816,7 @@
     function copyAccountNum() {
       const acc = document.getElementById('bankAccountNum').innerText;
       navigator.clipboard.writeText(acc);
-      alert('계좌번호가 복사되었습니다! ' + acc);
+      alert('데모 계좌번호가 복사되었습니다! ' + acc);
     }
 
     function openEasyPay(type) {
@@ -837,9 +876,9 @@
     }
 
     let activePrecipitationType = null;
-    async function fetchSeoulLiveWeather() {
+    async function fetchSeoulLiveWeather(lat = seoulSpots[0].lat, lng = seoulSpots[0].lng) {
       try {
-        const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.9780&current_weather=true');
+        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true`);
         const data = await res.json();
         const weather = data.current_weather;
         const tempStr = `${Math.round(weather.temperature)}°C`;
@@ -914,8 +953,22 @@
       document.getElementById('page1').classList.toggle('hidden', currentPage !== 1);
       document.getElementById('page2').classList.toggle('hidden', currentPage !== 2);
       document.getElementById('pageIndicator').innerText = `PG ${currentPage} / 2`;
-      document.getElementById('prevBtn').disabled = currentPage === 1;
-      document.getElementById('nextBtn').disabled = currentPage === 2;
+      updateModalHeader();
+
+      const prevBtn = document.getElementById('prevBtn');
+      const nextBtn = document.getElementById('nextBtn');
+      const isFirst = currentPage === 1;
+      const isLast = currentPage === 2;
+
+      prevBtn.disabled = isFirst;
+      prevBtn.classList.toggle('opacity-50', isFirst);
+      prevBtn.classList.toggle('cursor-not-allowed', isFirst);
+      prevBtn.classList.toggle('cursor-pointer', !isFirst);
+
+      nextBtn.disabled = isLast;
+      nextBtn.classList.toggle('opacity-50', isLast);
+      nextBtn.classList.toggle('cursor-not-allowed', isLast);
+      nextBtn.classList.toggle('cursor-pointer', !isLast);
     }
 
     trackVisitors();
