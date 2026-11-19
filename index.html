@@ -274,6 +274,11 @@
       <select id="langSelectMobile" onchange="changeLanguage(this.value)" class="bg-amber-300 border-2 border-black text-[10px] font-bold p-1">
         <option value="ko">🇰🇷 한국어</option>
         <option value="en">🇺🇸 English</option>
+        <option value="fr">🇫🇷 Français</option>
+        <option value="es">🇪🇸 Español</option>
+        <option value="ja">🇯🇵 日本語</option>
+        <option value="de">🇩🇪 Deutsch</option>
+        <option value="it">🇮🇹 Italiano</option>
       </select>
 
       <button onclick="toggleMenu(true)" class="pixel-btn-sun px-2.5 py-1.5 flex items-center gap-1 font-arcade text-[8px] border-2 border-black shrink-0">
@@ -307,6 +312,11 @@
           <select id="langSelectDesktop" onchange="changeLanguage(this.value)" class="bg-amber-200 border border-black text-xs font-bold px-1.5 py-0.5">
             <option value="ko">🇰🇷 한국어</option>
             <option value="en">🇺🇸 English</option>
+            <option value="fr">🇫🇷 Français</option>
+            <option value="es">🇪🇸 Español</option>
+            <option value="ja">🇯🇵 日本語</option>
+            <option value="de">🇩🇪 Deutsch</option>
+            <option value="it">🇮🇹 Italiano</option>
           </select>
         </div>
       </div>
@@ -472,7 +482,7 @@
 
         <div class="bg-amber-100 border-2 border-black p-2.5 flex items-center justify-between">
           <div>
-            <div class="text-[10px] font-bold text-gray-600" id="bankLabel">TacoTaco Demo Account</div>
+            <div class="text-[10px] font-bold text-gray-600">TacoTaco Demo Account</div>
             <div class="text-xs font-black tracking-wider" id="bankAccountNum">DEMO-00-0000000</div>
           </div>
           <button onclick="copyAccountNum()" id="btnCopyAccount" class="pixel-btn-sky px-2.5 py-1 text-[10px] font-bold">복사</button>
@@ -496,18 +506,86 @@
 
     let isAdmin = new URLSearchParams(window.location.search).get('admin') === 'true';
     let isStoreOpen = true;
-    let currentSpotIdx = 0;
 
     let dynamicMenuItems = [
-      { id: 1, name: 'Carne Asada Taco', krName: '카르네 아사다 타코', price: '₩ 4,500', numPrice: 4500, desc: '직화로 구운 부채살, 고수, 다진 양파, 살사 베르데', descEn: 'Char-grilled flat iron steak, cilantro, diced onion, salsa verde', stock: 6, icon: '🥩' },
-      { id: 2, name: 'Birria Quesa Taco', krName: '비리아 퀘사 타코', price: '₩ 5,000', numPrice: 5000, desc: '푹 삶은 우삼겹, 듬뿍 넣은 와하카 치즈, 비리아 콘소메 스튜', descEn: 'Slow-braised beef brisket, melted Oaxaca cheese, birria consomé dip', stock: 18, icon: '🧀' },
-      { id: 3, name: 'Al Pastor Taco', krName: '알 파스토르 타코', price: '₩ 4,500', numPrice: 4500, desc: '멕시칸 양념 돼지고기, 구운 파인애플, 살사 로하', descEn: 'Marinated pork shoulder, roasted pineapple, salsa roja', stock: 24, icon: '🍍' },
-      { id: 4, name: 'Baja Fish Taco', krName: '바하 피쉬 타코', price: '₩ 5,000', numPrice: 5000, desc: '바삭한 맥주 튀김 옷을 입힌 대구살, 치폴레 크레마, 양배추 슬로', descEn: 'Crispy beer-battered cod fillet, chipotle crema, cabbage slaw', stock: 3, icon: '🐟' }
+      {
+        id: 1,
+        name: 'Carne Asada Taco',
+        subName: { ko: '카르네 아사다 타코', en: 'Grilled Steak Taco', fr: 'Taco au Bœuf Grillé', es: 'Taco de Carne Asada', ja: 'カルネ・アサダ・タコス', de: 'Gegrilltes Rindfleisch-Taco', it: 'Taco di Manzo Grigliato' },
+        price: '₩ 4,500',
+        numPrice: 4500,
+        desc: {
+          ko: '직화로 구운 부채살, 고수, 다진 양파, 살사 베르데',
+          en: 'Char-grilled flat iron steak, cilantro, diced onion, salsa verde',
+          fr: 'Bœuf grillé à la flamme, coriandre, oignon émincé, salsa verde',
+          es: 'Carne asada a la parrilla, cilantro, cebolla picada y salsa verde',
+          ja: '直火焼き牛ステーキ、パクチー、刻み玉ねぎ、サルサベルデ',
+          de: 'Gegrilltes Flanksteak, Koriander, gewürfelte Zwiebeln, Salsa Verde',
+          it: 'Manzo grigliato alla fiamma, coriandolo, cipolla tritata, salsa verde'
+        },
+        stock: 6,
+        icon: '🥩'
+      },
+      {
+        id: 2,
+        name: 'Birria Quesa Taco',
+        subName: { ko: '비리아 퀘사 타코', en: 'Braised Beef Cheese Taco', fr: 'Taco Birria au Fromage', es: 'Quesabirria Tradicional', ja: 'ビリア・ケサ・タコス', de: 'Birria-Käse-Taco', it: 'Taco Birria al Formaggio' },
+        price: '₩ 5,000',
+        numPrice: 5000,
+        desc: {
+          ko: '푹 삶은 우삼겹, 듬뿍 넣은 와하카 치즈, 비리아 콘소메 스튜',
+          en: 'Slow-braised beef brisket, melted Oaxaca cheese, birria consomé dip',
+          fr: 'Bœuf mijoté fondant, fromage Oaxaca, bouillon consommé birria',
+          es: 'Res braseada a fuego lento, queso Oaxaca derretido y consomé',
+          ja: 'じっくり煮込んだ牛バラ肉、オアハカチーズ、ビリアコンソメ付き',
+          de: 'Geschmortes Rinderbrustfleisch, Oaxaca-Käse, Birria-Consommé',
+          it: 'Manzo brasato lento, formaggio Oaxaca fuso e brodo consomé'
+        },
+        stock: 18,
+        icon: '🧀'
+      },
+      {
+        id: 3,
+        name: 'Al Pastor Taco',
+        subName: { ko: '알 파스토르 타코', en: 'Marinated Pork & Pineapple Taco', fr: 'Taco Porc Mariné & Ananas', es: 'Taco al Pastor con Piña', ja: 'アル・パストール・タコス', de: 'Al Pastor Schweinefleisch-Taco', it: 'Taco Al Pastor e Ananas' },
+        price: '₩ 4,500',
+        numPrice: 4500,
+        desc: {
+          ko: '멕시칸 양념 돼지고기, 구운 파인애플, 살사 로하',
+          en: 'Marinated pork shoulder, roasted pineapple, salsa roja',
+          fr: 'Échine de porc marinée, ananas rôti, salsa roja',
+          es: 'Cerdo adobado al pastor, piña asada y salsa roja',
+          ja: 'メキシカンマリネ豚肉、焼きパイナップル、サルサロハ',
+          de: 'Mariniertes Schweinefleisch, geröstete Ananas, Salsa Roja',
+          it: 'Maiale marinato spezie messicane, ananas arrostito, salsa roja'
+        },
+        stock: 24,
+        icon: '🍍'
+      },
+      {
+        id: 4,
+        name: 'Baja Fish Taco',
+        subName: { ko: '바하 피쉬 타코', en: 'Crispy Cod Fish Taco', fr: 'Taco de Cabillaud Croustillant', es: 'Taco de Pescado Estilo Baja', ja: 'バハ・フィッシュ・タコス', de: 'Knuspriger Fisch-Taco', it: 'Taco di Merluzzo Croccante' },
+        price: '₩ 5,000',
+        numPrice: 5000,
+        desc: {
+          ko: '바삭한 맥주 튀김 옷을 입힌 대구살, 치폴레 크레마, 양배추 슬로',
+          en: 'Crispy beer-battered cod fillet, chipotle crema, cabbage slaw',
+          fr: 'Filet de cabillaud pané croustillant, crème chipotle, salade de chou',
+          es: 'Filete de bacalao crujiente, crema de chipotle y col rallada',
+          ja: 'サクサク衣のタラフライ、チポレクリーム、キャベツスロー',
+          de: 'Knusprig paniertes Kabeljaufilet, Chipotle-Crema, Krautsalat',
+          it: 'Filetto di merluzzo croccante, crema chipotle e insalata di cavolo'
+        },
+        stock: 3,
+        icon: '🐟'
+      }
     ];
 
     const translations = {
       ko: {
         noticeTitle: "공지사항 (NOTICE)",
+        noticeBody: "🌮 [오늘의 스폿] 홍대입구역 9번 출구 앞 정상 영업 중!\n🔥 인기 메뉴 '비리아 퀘사 타코' 조기 품절될 수 있습니다.",
         menuBtn: "MENU",
         openMenu: "OPEN MENU & ORDER",
         modalPage1: "TACOTACO MENU [PAGE 1/2]",
@@ -548,6 +626,7 @@
       },
       en: {
         noticeTitle: "NOTICE & ANNOUNCEMENTS",
+        noticeBody: "🌮 [TODAY'S SPOT] Open now in front of Hongdae St. Exit 9!\n🔥 Popular item 'Birria Quesa Taco' may sell out early.",
         menuBtn: "MENU",
         openMenu: "OPEN MENU & ORDER",
         modalPage1: "TACOTACO MENU [PAGE 1/2]",
@@ -585,10 +664,216 @@
           { ingredient: 'Chicken', origin: 'Domestic (Korea)', note: 'Fresh chilled boneless thigh' },
           { ingredient: 'Cod Fish', origin: 'Russia / Deep Sea', note: 'Wild-caught boneless fillet' }
         ]
+      },
+      fr: {
+        noticeTitle: "ANNONCES (NOTICE)",
+        noticeBody: "🌮 [SPOT DU JOUR] Ouvert devant la sortie 9 de Hongdae !\n🔥 Le 'Birria Quesa Taco' risque d'être vite épuisé.",
+        menuBtn: "MENU",
+        openMenu: "VOIR LE MENU",
+        modalPage1: "MENU TACOTACO [PAGE 1/2]",
+        modalPage2: "ORIGINE PRODUITS [PAGE 2/2]",
+        weather: "Météo :",
+        temp: "Temp :",
+        seoulSpots: "📍 SPOTS SÉOUL :",
+        currentLoc: "Position :",
+        timeLeft: "Temps restant :",
+        visits: "Visites :",
+        revisits: "Retours :",
+        adminBtn: "👨‍🍳 Gérant",
+        adminMobileBtn: "👨‍🍳 Mode Gérant",
+        adminModalLabel: "Gérant",
+        bottomPayDesktop: "⚡ <strong>Paiement sur place !</strong> (KakaoPay / Virement / Espèces)",
+        bottomPayMobile: "⚡ <strong>Paiement sur place !</strong> (KakaoPay / Virement)",
+        payTitle: "Commande par virement (Démo)",
+        payDesc: "Vérifiez votre choix et effectuez un virement démo pour lancer la cuisson.",
+        copyBtn: "Copier",
+        confirmBtn: "Virement effectué ! 👍",
+        orderBtn: "Commander 🌮",
+        closedBtn: "Fermé",
+        soldOutBtn: "ÉPUISÉ",
+        thIngredient: "Ingrédient",
+        thOrigin: "Origine",
+        thNotes: "Notes",
+        hideNotice: "Ne plus afficher aujourd'hui",
+        editNoticeBtn: "✏️ Modifier",
+        closeBtn: "Fermer",
+        stockLeftText: " restants",
+        spots: ["Hongdae", "Palais", "Namsan", "Gangnam", "Yeouido"],
+        originData: [
+          { ingredient: 'Bœuf (Beef)', origin: 'États-Unis / Australie', note: 'Paleron et poitrine USDA Choice' },
+          { ingredient: 'Porc (Pork)', origin: 'Corée (Jeju)', note: 'Échine fraîche sans antibiotiques' },
+          { ingredient: 'Poulet (Chicken)', origin: 'Corée du Sud', note: 'Haut de cuisse frais désossé' },
+          { ingredient: 'Cabillaud (Fish)', origin: 'Russie / Haute Mer', note: 'Filet sauvage sans arêtes' }
+        ]
+      },
+      es: {
+        noticeTitle: "AVISOS (NOTICE)",
+        noticeBody: "🌮 [PUNTO DE HOY] ¡Abierto frente a Hongdae Salida 9!\n🔥 El 'Birria Quesa Taco' puede agotarse temprano.",
+        menuBtn: "MENÚ",
+        openMenu: "VER MENÚ Y PEDIR",
+        modalPage1: "MENÚ TACOTACO [PÁG 1/2]",
+        modalPage2: "ORIGEN INSUMOS [PÁG 2/2]",
+        weather: "Clima:",
+        temp: "Temp:",
+        seoulSpots: "📍 PUNTOS SEÚL:",
+        currentLoc: "Ubicación:",
+        timeLeft: "Restante:",
+        visits: "Visitas:",
+        revisits: "Regresos:",
+        adminBtn: "👨‍🍳 Dueño",
+        adminMobileBtn: "👨‍🍳 Modo Dueño",
+        adminModalLabel: "Dueño",
+        bottomPayDesktop: "⚡ <strong>¡Pago en el lugar!</strong> (KakaoPay / Transferencia / Efectivo)",
+        bottomPayMobile: "⚡ <strong>¡Pago en el lugar!</strong> (KakaoPay / Efectivo)",
+        payTitle: "Pedido por transferencia (Demo)",
+        payDesc: "Confirma tu taco y envía una transferencia demo para empezar a cocinar.",
+        copyBtn: "Copiar",
+        confirmBtn: "¡Transferencia lista! 👍",
+        orderBtn: "Pedir ahora 🌮",
+        closedBtn: "Cerrado",
+        soldOutBtn: "AGOTADO",
+        thIngredient: "Ingrediente",
+        thOrigin: "Origen",
+        thNotes: "Notas",
+        hideNotice: "No mostrar de nuevo hoy",
+        editNoticeBtn: "✏️ Editar",
+        closeBtn: "Cerrar",
+        stockLeftText: " disp.",
+        spots: ["Hongdae", "Palacio", "Namsan", "Gangnam", "Yeouido"],
+        originData: [
+          { ingredient: 'Res (Beef)', origin: 'EE. UU. / Australia', note: 'Corte USDA Choice a la parrilla' },
+          { ingredient: 'Cerdo (Pork)', origin: 'Corea (Jeju)', note: 'Cerdo fresco sin antibióticos' },
+          { ingredient: 'Pollo (Chicken)', origin: 'Corea del Sur', note: 'Muslo fresco deshuesado' },
+          { ingredient: 'Bacalao (Fish)', origin: 'Rusia / Alta Mar', note: 'Filete silvestre sin espinas' }
+        ]
+      },
+      ja: {
+        noticeTitle: "お知らせ (NOTICE)",
+        noticeBody: "🌮 [本日のスポット] 弘大入口駅9番出口前で営業中！\n🔥 人気メニュー「ビリア・ケサ・タコス」は早期完売する場合があります。",
+        menuBtn: "MENU",
+        openMenu: "メニュー・注文",
+        modalPage1: "TACOTACO MENU [1/2]",
+        modalPage2: "原産地情報 [2/2]",
+        weather: "天気:",
+        temp: "気温:",
+        seoulSpots: "📍 スポット移動:",
+        currentLoc: "現在地:",
+        timeLeft: "残り時間:",
+        visits: "訪問者:",
+        revisits: "リピート:",
+        adminBtn: "👨‍🍳 店主",
+        adminMobileBtn: "👨‍🍳 店主モード",
+        adminModalLabel: "店主",
+        bottomPayDesktop: "⚡ <strong>現地決済OK！</strong> (KakaoPay / 銀行振込 / 現金)",
+        bottomPayMobile: "⚡ <strong>現地決済OK！</strong> (KakaoPay / 現金)",
+        payTitle: "振込注文 (デモ)",
+        payDesc: "メニューを確認し、デモ口座へ送金するとすぐに調理を開始します。",
+        copyBtn: "コピー",
+        confirmBtn: "送金完了しました！ 👍",
+        orderBtn: "注文する 🌮",
+        closedBtn: "営業終了",
+        soldOutBtn: "完売 (SOLD OUT)",
+        thIngredient: "食材",
+        thOrigin: "原産地",
+        thNotes: "備考",
+        hideNotice: "今日は表示しない",
+        editNoticeBtn: "✏️ 編集",
+        closeBtn: "閉じる",
+        stockLeftText: "個残り",
+        spots: ["弘大", "景福宮", "南山", "江南", "汝矣島"],
+        originData: [
+          { ingredient: '牛肉 (Beef)', origin: 'アメリカ / オーストラリア', note: 'USDAチョイス等級ミスジ・バラ肉' },
+          { ingredient: '豚肉 (Pork)', origin: '韓国産 (済州島)', note: '済州産無抗生物質肩ロース' },
+          { ingredient: '鶏肉 (Chicken)', origin: '韓国産', note: '新鮮冷蔵もも正肉' },
+          { ingredient: 'タラ (Fish)', origin: 'ロシア / 遠洋産', note: '天然タラ切り身フィレ' }
+        ]
+      },
+      de: {
+        noticeTitle: "HINWEISE (NOTICE)",
+        noticeBody: "🌮 [HEUTIGER SPOT] Geöffnet vor Hongdae Ausgang 9!\n🔥 Beliebter 'Birria Quesa Taco' kann früh ausverkauft sein.",
+        menuBtn: "MENÜ",
+        openMenu: "MENÜ & BESTELLEN",
+        modalPage1: "TACOTACO MENÜ [SEITE 1/2]",
+        modalPage2: "HERKUNFT [SEITE 2/2]",
+        weather: "Wetter:",
+        temp: "Temp:",
+        seoulSpots: "📍 SEOUL SPOTS:",
+        currentLoc: "Standort:",
+        timeLeft: "Restzeit:",
+        visits: "Besuche:",
+        revisits: "Wiederkehr:",
+        adminBtn: "👨‍🍳 Inhaber",
+        adminMobileBtn: "👨‍🍳 Inhaber-Modus",
+        adminModalLabel: "Inhaber",
+        bottomPayDesktop: "⚡ <strong>Zahlung vor Ort!</strong> (KakaoPay / Überweisung / Bar)",
+        bottomPayMobile: "⚡ <strong>Zahlung vor Ort!</strong> (KakaoPay / Bar)",
+        payTitle: "Überweisung (Demo)",
+        payDesc: "Artikel prüfen und Demo-Überweisung senden, um sofort zu starten.",
+        copyBtn: "Kopieren",
+        confirmBtn: "Überweisung erledigt! 👍",
+        orderBtn: "Bestellen 🌮",
+        closedBtn: "Geschlossen",
+        soldOutBtn: "AUSVERKAUFT",
+        thIngredient: "Zutat",
+        thOrigin: "Herkunft",
+        thNotes: "Hinweise",
+        hideNotice: "Heute nicht mehr anzeigen",
+        editNoticeBtn: "✏️ Bearbeiten",
+        closeBtn: "Schließen",
+        stockLeftText: " übrig",
+        spots: ["Hongdae", "Palast", "Namsan", "Gangnam", "Yeouido"],
+        originData: [
+          { ingredient: 'Rind (Beef)', origin: 'USA / Australien', note: 'USDA Choice Flanksteak & Brust' },
+          { ingredient: 'Schwein (Pork)', origin: 'Korea (Jeju)', note: 'Antibiotikafreie Schweineschulter' },
+          { ingredient: 'Huhn (Chicken)', origin: 'Südkorea', note: 'Frisches entbeintes Hähnchenschenkel' },
+          { ingredient: 'Kabeljau (Fish)', origin: 'Russland / Hochsee', note: 'Wildfang-Kabeljaufilet' }
+        ]
+      },
+      it: {
+        noticeTitle: "AVVISI (NOTICE)",
+        noticeBody: "🌮 [SPOT DI OGGI] Aperto davanti all'uscita 9 di Hongdae!\n🔥 Il 'Birria Quesa Taco' potrebbe esaurirsi presto.",
+        menuBtn: "MENÙ",
+        openMenu: "APRI MENÙ E ORDINA",
+        modalPage1: "MENÙ TACOTACO [PAG 1/2]",
+        modalPage2: "ORIGINE INGREDIENTI [PAG 2/2]",
+        weather: "Meteo:",
+        temp: "Temp:",
+        seoulSpots: "📍 SPOT SEOUL:",
+        currentLoc: "Posizione:",
+        timeLeft: "Tempo:",
+        visits: "Visite:",
+        revisits: "Ritorni:",
+        adminBtn: "👨‍🍳 Titolare",
+        adminMobileBtn: "👨‍🍳 Modalità Titolare",
+        adminModalLabel: "Titolare",
+        bottomPayDesktop: "⚡ <strong>Pagamento sul posto!</strong> (KakaoPay / Bonifico / Contanti)",
+        bottomPayMobile: "⚡ <strong>Pagamento sul posto!</strong> (KakaoPay / Contanti)",
+        payTitle: "Ordine con bonifico (Demo)",
+        payDesc: "Conferma il piatto e invia un bonifico demo per iniziare subito la cottura.",
+        copyBtn: "Copia",
+        confirmBtn: "Bonifico completato! 👍",
+        orderBtn: "Ordina ora 🌮",
+        closedBtn: "Chiuso",
+        soldOutBtn: "ESAURITO",
+        thIngredient: "Ingrediente",
+        thOrigin: "Origine",
+        thNotes: "Note",
+        hideNotice: "Non mostrare più oggi",
+        editNoticeBtn: "✏️ Modifica",
+        closeBtn: "Chiudi",
+        stockLeftText: " rimasti",
+        spots: ["Hongdae", "Palazzo", "Namsan", "Gangnam", "Yeouido"],
+        originData: [
+          { ingredient: 'Manzo (Beef)', origin: 'USA / Australia', note: 'Taglio scelto USDA Choice' },
+          { ingredient: 'Maiale (Pork)', origin: 'Corea (Jeju)', note: 'Spalla fresca senza antibiotici' },
+          { ingredient: 'Pollo (Chicken)', origin: 'Corea del Sud', note: 'Coscia disossata fresca' },
+          { ingredient: 'Merluzzo (Fish)', origin: 'Russia / Alto Mare', note: 'Filetto pescato in mare aperto' }
+        ]
       }
     };
 
     let currentLang = 'ko';
+    let hasCustomNotice = false;
 
     function updateModalHeader() {
       const t = translations[currentLang] || translations.ko;
@@ -600,6 +885,9 @@
       const t = translations[lang] || translations.ko;
 
       document.getElementById('noticePanelTitle').innerText = t.noticeTitle;
+      if (!hasCustomNotice && t.noticeBody) {
+        document.getElementById('noticeContentText').innerText = t.noticeBody;
+      }
       document.getElementById('menuBtnTextMobile').innerText = t.menuBtn;
       document.getElementById('btnOpenMenu').innerText = t.openMenu;
       document.getElementById('lblWeather').innerText = t.weather;
@@ -673,7 +961,6 @@
     const truckMarker = L.marker([seoulSpots[0].lat, seoulSpots[0].lng], { icon: customTruckIcon }).addTo(map);
 
     function moveToSpot(idx) {
-      currentSpotIdx = idx;
       const spot = seoulSpots[idx];
       map.flyTo([spot.lat, spot.lng], 15, { duration: 1.2 });
       truckMarker.setLatLng([spot.lat, spot.lng]);
@@ -761,11 +1048,11 @@
             <div class="flex items-start justify-between gap-2 mb-1.5">
               <div>
                 <h3 class="text-black font-bold text-xs sm:text-sm leading-snug">${item.icon} ${item.name}</h3>
-                <p class="text-[11px] text-gray-600 font-bold leading-tight">${item.krName}</p>
+                <p class="text-[11px] text-gray-600 font-bold leading-tight">${item.subName[currentLang] || item.subName.ko}</p>
               </div>
               <span class="font-arcade text-black font-bold text-[10px] bg-[#ffca3a] px-1.5 py-0.5 border border-black shrink-0">${item.price}</span>
             </div>
-            <p class="text-xs text-gray-700 mb-2 leading-relaxed font-medium">${currentLang === 'en' ? item.descEn : item.desc}</p>
+            <p class="text-xs text-gray-700 mb-2 leading-relaxed font-medium">${item.desc[currentLang] || item.desc.ko}</p>
           </div>
 
           <div>
@@ -859,7 +1146,10 @@
     function editNotice() {
       if (!isAdmin) return;
       const newText = prompt("새로운 공지사항을 입력하세요:", document.getElementById('noticeContentText').innerText);
-      if (newText) document.getElementById('noticeContentText').innerText = newText;
+      if (newText) {
+        hasCustomNotice = true;
+        document.getElementById('noticeContentText').innerText = newText;
+      }
     }
 
     function trackVisitors() {
