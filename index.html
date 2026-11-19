@@ -190,12 +190,25 @@
       0%, 100% { transform: translateY(0); }
       50% { transform: translateY(-3px); }
     }
+
+    /* Custom Pixel Toast Banner */
+    #pixelToast {
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
   </style>
 </head>
 <body class="bg-[#0f172a] text-black select-none">
 
   <!-- ROOT CONTAINER FOR STRICT MIN-SIZE GUARANTEE -->
   <div id="app-root">
+
+    <!-- CUSTOM RETRO TOAST BANNER -->
+    <div id="pixelToast" class="hidden fixed top-16 left-1/2 -translate-x-1/2 z-[60] pointer-events-none">
+      <div class="pixel-box-vibrant px-4 py-2.5 bg-amber-200 text-black text-xs font-extrabold flex items-center gap-2 whitespace-nowrap">
+        <span>🌮</span>
+        <span id="pixelToastText">READY!</span>
+      </div>
+    </div>
 
     <!-- Map Container -->
     <div id="map" class="absolute inset-0 w-full h-full pixelated-map z-0"></div>
@@ -506,6 +519,47 @@
 
     let isAdmin = new URLSearchParams(window.location.search).get('admin') === 'true';
     let isStoreOpen = true;
+    let toastTimeout = null;
+
+    function showToast(message) {
+      const toastEl = document.getElementById('pixelToast');
+      const textEl = document.getElementById('pixelToastText');
+      if (!toastEl || !textEl) return;
+      textEl.innerText = message;
+      toastEl.classList.remove('hidden');
+      if (toastTimeout) clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toastEl.classList.add('hidden');
+      }, 2400);
+    }
+
+    // Live countdown starting at 01:42:19 (6139s)
+    const INITIAL_COUNTDOWN_SECONDS = 1 * 3600 + 42 * 60 + 19;
+    let remainingSeconds = INITIAL_COUNTDOWN_SECONDS;
+
+    function formatCountdown(totalSecs) {
+      const clamped = Math.max(0, totalSecs);
+      const hrs = String(Math.floor(clamped / 3600)).padStart(2, '0');
+      const mins = String(Math.floor((clamped % 3600) / 60)).padStart(2, '0');
+      const secs = String(clamped % 60).padStart(2, '0');
+      return `${hrs}:${mins}:${secs}`;
+    }
+
+    function updateCountdownDisplay() {
+      const formatted = formatCountdown(remainingSeconds);
+      const desktopEl = document.getElementById('countdownTimer');
+      const mobileEl = document.getElementById('countdownTimerMobile');
+      if (desktopEl) desktopEl.innerText = formatted;
+      if (mobileEl) mobileEl.innerText = formatted;
+    }
+
+    setInterval(() => {
+      remainingSeconds -= 1;
+      if (remainingSeconds < 0) {
+        remainingSeconds = INITIAL_COUNTDOWN_SECONDS;
+      }
+      updateCountdownDisplay();
+    }, 1000);
 
     let dynamicMenuItems = [
       {
@@ -606,6 +660,8 @@
         payDesc: "선택하신 메뉴 수량을 확인 후 아래 계좌로 입금해 주시면 즉시 조리가 시작됩니다.",
         copyBtn: "복사",
         confirmBtn: "입금 완료했어요! 👍",
+        copiedToast: "데모 계좌번호가 복사되었습니다!",
+        orderToast: "주문 입금 확인 요청이 전송되었습니다!",
         orderBtn: "주문하기 🌮",
         closedBtn: "영업 종료",
         soldOutBtn: "품절 (SOLD OUT)",
@@ -647,6 +703,8 @@
         payDesc: "Confirm your item and send a demo transfer to start cooking right away.",
         copyBtn: "Copy",
         confirmBtn: "Transfer Complete! 👍",
+        copiedToast: "Demo account number copied!",
+        orderToast: "Order confirmation sent! Your number will be called soon.",
         orderBtn: "Order Now 🌮",
         closedBtn: "Closed",
         soldOutBtn: "SOLD OUT",
@@ -688,6 +746,8 @@
         payDesc: "Vérifiez votre choix et effectuez un virement démo pour lancer la cuisson.",
         copyBtn: "Copier",
         confirmBtn: "Virement effectué ! 👍",
+        copiedToast: "Numéro de compte démo copié !",
+        orderToast: "Confirmation envoyée ! Votre numéro sera appelé.",
         orderBtn: "Commander 🌮",
         closedBtn: "Fermé",
         soldOutBtn: "ÉPUISÉ",
@@ -729,6 +789,8 @@
         payDesc: "Confirma tu taco y envía una transferencia demo para empezar a cocinar.",
         copyBtn: "Copiar",
         confirmBtn: "¡Transferencia lista! 👍",
+        copiedToast: "¡Número de cuenta demo copiado!",
+        orderToast: "¡Confirmación enviada! Llamaremos tu turno pronto.",
         orderBtn: "Pedir ahora 🌮",
         closedBtn: "Cerrado",
         soldOutBtn: "AGOTADO",
@@ -770,6 +832,8 @@
         payDesc: "メニューを確認し、デモ口座へ送金するとすぐに調理を開始します。",
         copyBtn: "コピー",
         confirmBtn: "送金完了しました！ 👍",
+        copiedToast: "デモ口座番号をコピーしました！",
+        orderToast: "入金確認リクエストを送信しました！",
         orderBtn: "注文する 🌮",
         closedBtn: "営業終了",
         soldOutBtn: "完売 (SOLD OUT)",
@@ -811,6 +875,8 @@
         payDesc: "Artikel prüfen und Demo-Überweisung senden, um sofort zu starten.",
         copyBtn: "Kopieren",
         confirmBtn: "Überweisung erledigt! 👍",
+        copiedToast: "Demo-Kontonummer kopiert!",
+        orderToast: "Bestätigung gesendet! Deine Nummer wird gleich aufgerufen.",
         orderBtn: "Bestellen 🌮",
         closedBtn: "Geschlossen",
         soldOutBtn: "AUSVERKAUFT",
@@ -852,6 +918,8 @@
         payDesc: "Conferma il piatto e invia un bonifico demo per iniziare subito la cottura.",
         copyBtn: "Copia",
         confirmBtn: "Bonifico completato! 👍",
+        copiedToast: "Numero di conto demo copiato!",
+        orderToast: "Conferma inviata! Chiameremo presto il tuo numero.",
         orderBtn: "Ordina ora 🌮",
         closedBtn: "Chiuso",
         soldOutBtn: "ESAURITO",
@@ -1101,9 +1169,12 @@
     }
 
     function copyAccountNum() {
+      const t = translations[currentLang] || translations.ko;
       const acc = document.getElementById('bankAccountNum').innerText;
-      navigator.clipboard.writeText(acc);
-      alert('데모 계좌번호가 복사되었습니다! ' + acc);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(acc).catch(() => {});
+      }
+      showToast(`${t.copiedToast} (${acc})`);
     }
 
     function openEasyPay(type) {
@@ -1115,7 +1186,8 @@
     }
 
     function confirmOrder() {
-      alert('주문 입금 확인 요청이 전송되었습니다! 사장님이 확인 후 번호를 불러드립니다.');
+      const t = translations[currentLang] || translations.ko;
+      showToast(t.orderToast);
       togglePayModal(false);
       toggleMenu(false);
     }
@@ -1261,6 +1333,7 @@
       nextBtn.classList.toggle('cursor-pointer', !isLast);
     }
 
+    updateCountdownDisplay();
     trackVisitors();
     fetchSeoulLiveWeather();
     renderPrecipitation();
